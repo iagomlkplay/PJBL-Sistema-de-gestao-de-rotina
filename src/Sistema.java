@@ -9,6 +9,7 @@ public class Sistema {
     private List<Tarefa> tarefas;
     private List<Relatorio> relatorios;
     private List<SolicitacaoMudanca> solicitacoes;
+    private List<Relatorio> relatoriosDiarios;
 
     private int proximoIdUsuario = 1; // para simular ID incremental
 
@@ -20,6 +21,7 @@ public class Sistema {
         tarefas = new ArrayList<>();
         relatorios = new ArrayList<>();
         solicitacoes = new ArrayList<>();
+        relatoriosDiarios = new ArrayList<>();
     }
 
     public static Sistema getInstance() {
@@ -119,21 +121,24 @@ public class Sistema {
         Date hoje = new Date();
         long tarefasCumpridas = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.PRONTO).count();
         long tarefasAtrasadas = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
-        long relatoriosEnviados = relatorios.size();
+        long relatoriosEnviados = relatorios.size(); // relatórios enviados por devs (RF06)
 
         StringBuilder conteudo = new StringBuilder();
         conteudo.append("Relatório Diário - ").append(hoje).append("\n");
         conteudo.append("Tarefas cumpridas (PRONTO): ").append(tarefasCumpridas).append("\n");
         conteudo.append("Tarefas atrasadas: ").append(tarefasAtrasadas).append("\n");
         conteudo.append("Relatórios enviados pelos devs: ").append(relatoriosEnviados).append("\n");
-        conteudo.append("Detalhes dos relatórios:\n");
+        conteudo.append("Detalhes dos relatórios dos devs:\n");
         for (Relatorio r : relatorios) {
             conteudo.append("- ").append(r.getConteudo()).append("\n");
         }
 
+        // Cria e armazena o relatório diário em uma lista separada (histórico)
         Relatorio relatorioDiario = new Relatorio(conteudo.toString());
         relatorioDiario.setDataEnvio(hoje);
-        relatorios.add(relatorioDiario);
+        relatoriosDiarios.add(relatorioDiario);
+
+        // Imprime o relatório diário (opcional)
         System.out.println(conteudo.toString());
 
         // RF16 e RF17 também são emitidos aqui (além das notificações imediatas)
@@ -142,7 +147,7 @@ public class Sistema {
         }
     }
 
-    // Getters para acesso externo (mas cuidado para não modificar diretamente)
+    // Getters para acesso externo
     public List<Usuario> getUsuarios() { return usuarios; }
     public List<UsuarioDev> getDevs() { return devs; }
     public List<UsuarioGestor> getGestores() { return gestores; }
@@ -150,4 +155,5 @@ public class Sistema {
     public List<Tarefa> getTarefas() { return tarefas; }
     public List<Relatorio> getRelatorios() { return relatorios; }
     public List<SolicitacaoMudanca> getSolicitacoes() { return solicitacoes; }
+    public List<Relatorio> getRelatoriosDiarios() { return relatoriosDiarios; }
 }
