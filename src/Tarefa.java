@@ -10,6 +10,7 @@ public class Tarefa {
     private UsuarioDev devResponsavel;
     private double horasEstimadas;
     private double horasTrabalhadas;
+    private Projeto projetoPai;
 
     // Construtor sem especificar horas (usa 1.0 como padrão)
     public Tarefa(String descricao, Date prazo, NivelImportancia nivelImportancia, UsuarioDev devResponsavel) {
@@ -71,4 +72,6 @@ public class Tarefa {
     public void setHorasEstimadas(double horasEstimadas) { this.horasEstimadas = horasEstimadas; }
     public double getHorasTrabalhadas() { return horasTrabalhadas; }
     public void setHorasTrabalhadas(double horasTrabalhadas) { this.horasTrabalhadas = horasTrabalhadas; }
+    public Projeto getProjetoPai() { return projetoPai; }
+    public void setProjetoPai(Projeto projetoPai) { this.projetoPai = projetoPai; }
 }
