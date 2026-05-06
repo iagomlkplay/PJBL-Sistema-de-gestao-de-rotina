@@ -114,6 +114,11 @@ public class UsuarioGestor extends Usuario {
             if (tarefa.getStatus() == StatusTarefa.FEITO) {
                 tarefa.setStatus(StatusTarefa.PRONTO);
                 System.out.println("Tarefa " + tarefa.getId() + " validada como PRONTA.");
+
+                Projeto projetoPai = tarefa.getProjetoPai();
+                if (projetoPai != null) {
+                    projetoPai.verificarConclusao();
+                }
             } else {
                 System.out.println("Tarefa " + tarefa.getId() + " não está com status FEITO (atual: " + tarefa.getStatus() + ")");
             }
