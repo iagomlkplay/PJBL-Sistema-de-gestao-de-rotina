@@ -8,13 +8,12 @@ public abstract class Usuario {
     protected String senha;
     protected TipoUsuario tipoUsuario;
 
-    public Usuario(int id, String nome, String cpf, String email, String senha, TipoUsuario tipoUsuario) {
+    public Usuario(int id, String nome, String cpf, String email, String senha) {
         this.id = id;
         this.nome = nome;
         this.cpf = cpf;
         this.email = email;
         this.senha = senha;
-        this.tipoUsuario = tipoUsuario;
     }
 
     // Getters e Setters
