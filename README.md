@@ -46,7 +46,7 @@ Sistema desenvolvido em **Java** para gerenciar projetos, tarefas, prazos e o de
 | `UsuarioGestor` | Gestor – gerencia equipe, projetos e tarefas |
 | `Projeto` | Agrupa tarefas (não possui dono) |
 | `Tarefa` | Unidade de trabalho – contém horas estimadas, horas trabalhadas, status, projeto pai |
-| `Sistema` (Singleton) | Centraliza listas de usuários, projetos, tarefas, relatórios, solicitações. Gerencia cadastro, autenticação e notificações. |
+| `Sistema` | Centraliza listas de usuários, projetos, tarefas, relatórios, solicitações. Gerencia cadastro, autenticação e notificações. |
 | `Relatorio` | Relatório enviado por DEV ou gerado automaticamente (diário) |
 | `SolicitacaoMudanca` | Pedido de reorganização feito por DEV |
 
