@@ -5,8 +5,8 @@ public class Main {
         Sistema sistema = Sistema.getInstance();
 
         // Cadastro de usuários (RF01)
-        UsuarioDev dev1 = new UsuarioDev(1, "joao", "123", "João", "joao@email.com");
-        UsuarioGestor gestor1 = new UsuarioGestor(2, "maria", "456", "Maria", "maria@email.com", "TI");
+        UsuarioDev dev1 = new UsuarioDev(1, "João", "000.000.000-00", "joao@email.com", "senha");
+        UsuarioGestor gestor1 = new UsuarioGestor(2, "maria", "111.111.111-11", "maria@email.com", "senha", "TI");
         sistema.realizarCadastro(dev1);
         sistema.realizarCadastro(gestor1);
         gestor1.getEquipe().add(dev1);
