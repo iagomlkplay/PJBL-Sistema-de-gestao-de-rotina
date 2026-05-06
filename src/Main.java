@@ -22,7 +22,7 @@ public class Main {
 
         // 2. Teste de autenticação (RF01)
         System.out.println("\n2. Testando autenticação...");
-        Usuario autenticado = sistema.autenticar("12345678900", "senha123");
+        Usuario autenticado = sistema.autenticar("joao@email.com", "senha123");
         System.out.println(autenticado != null ? "Autenticado: " + autenticado.getNome() : "Falha na autenticação");
 
         // 3. Gestor cria projetos e tarefas (RF09)
