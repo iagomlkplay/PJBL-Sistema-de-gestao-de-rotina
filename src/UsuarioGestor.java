@@ -44,18 +44,23 @@ public class UsuarioGestor extends Usuario {
         System.out.println("Projeto criado e atribuído ao dev " + dev.getNome());
     }
 
-    // RF09: criar e atribuir tarefa
+    // RF09: criar e atribuir tarefa (compatibilidade, usa 1.0 hora estimada)
     public void criarAtribuirTarefa(String descricao, Date prazo, NivelImportancia importancia, int devId) {
+        criarAtribuirTarefa(descricao, prazo, importancia, devId, 1.0);
+    }
+
+    // RF09: criar e atribuir tarefa com horas estimadas
+    public void criarAtribuirTarefa(String descricao, Date prazo, NivelImportancia importancia, int devId, double horasEstimadas) {
         Sistema sistema = Sistema.getInstance();
         UsuarioDev dev = sistema.buscarDevPorId(devId);
         if (dev == null || !equipe.contains(dev)) {
             System.out.println("Dev não encontrado ou não está na sua equipe.");
             return;
         }
-        Tarefa tarefa = new Tarefa(descricao, prazo, importancia, dev);
+        Tarefa tarefa = new Tarefa(descricao, prazo, importancia, dev, horasEstimadas);
         sistema.adicionarTarefa(tarefa);
         dev.getTarefas().add(tarefa);
-        System.out.println("Tarefa criada e atribuída ao dev " + dev.getNome());
+        System.out.println("Tarefa criada com " + horasEstimadas + "h estimadas e atribuída ao dev " + dev.getNome());
     }
 
     // RF10: processar solicitação de mudança (aprovar ou reprovar)
@@ -110,6 +115,23 @@ public class UsuarioGestor extends Usuario {
         tarefa.setDevResponsavel(novoDev);
         novoDev.getTarefas().add(tarefa);
         System.out.println("Tarefa atrasada " + tarefa.getId() + " reatribuída de " + antigoDev.getNome() + " para " + novoDev.getNome());
+    }
+
+    // RF12 - reatribuir projeto atrasado
+    public void reatribuirProjetoAtrasado(Projeto projeto, UsuarioDev novoDev) {
+        if (projeto.getStatus() != StatusTarefa.ATRASADO) {
+            System.out.println("Este projeto não está atrasado (status: " + projeto.getStatus() + ")");
+            return;
+        }
+        if (!equipe.contains(projeto.getDevResponsavel()) || !equipe.contains(novoDev)) {
+            System.out.println("O dev antigo ou o novo dev não pertencem à sua equipe.");
+            return;
+        }
+        UsuarioDev antigoDev = projeto.getDevResponsavel();
+        antigoDev.getProjetos().remove(projeto);
+        projeto.setDevResponsavel(novoDev);
+        novoDev.getProjetos().add(projeto);
+        System.out.println("Projeto atrasado " + projeto.getId() + " reatribuído de " + antigoDev.getNome() + " para " + novoDev.getNome());
     }
 
     // Listar solicitações pendentes (para o gestor decidir)
