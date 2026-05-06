@@ -1,5 +1,3 @@
-import java.util.Date;
-
 public abstract class Usuario {
     protected int id;
     protected String nome;
@@ -23,8 +21,8 @@ public abstract class Usuario {
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
 
-    public String getLogin() { return cpf; }
-    public void setLogin(String cpf) { this.cpf = cpf; }
+    public String getCpf() { return cpf; }
+    public void setCpf(String cpf) { this.cpf = cpf; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
