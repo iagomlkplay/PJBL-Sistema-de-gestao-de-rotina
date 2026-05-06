@@ -1,64 +1,88 @@
+import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class UsuarioGestor extends Usuario {
     private String departamento;
-    private List<UsuarioDev> equipe;      // devs sob sua gestão
-    private List<Projeto> todosProjetos;
-    private List<Tarefa> todasTarefas;
-    private List<SolicitacaoMudanca> solicitacoesPendentes;
+    private List<UsuarioDev> equipe;      // devs sob sua gestão (referências)
 
     public UsuarioGestor(int id, String nome, String cpf, String email, String senha, String departamento) {
         super(id, nome, cpf, email, senha);
         this.departamento = departamento;
         this.equipe = new java.util.ArrayList<>();
-        this.todosProjetos = new java.util.ArrayList<>();
-        this.todasTarefas = new java.util.ArrayList<>();
-        this.solicitacoesPendentes = new java.util.ArrayList<>();
+        this.tipoUsuario = TipoUsuario.GESTOR;
     }
 
+    // RF08: visualizar todos os projetos e tarefas da equipe (com detalhes)
     public void visualizarTodosProjetosTarefas() {
-        System.out.println("Todos os projetos: " + todosProjetos);
-        System.out.println("Todas as tarefas: " + todasTarefas);
-    }
-
-    public void criarAtribuirProjeto(String nome, java.util.Date prazo, NivelImportancia importancia, int devId) {
-        UsuarioDev dev = buscarDevPorId(devId);
-        if (dev != null) {
-            Projeto projeto = new Projeto(0, nome, prazo, importancia, StatusTarefa.PENDENTE, dev);
-            todosProjetos.add(projeto);
-            dev.getProjetos().add(projeto);
-            System.out.println("Projeto criado e atribuído ao dev " + dev.getNome());
-        } else {
-            System.out.println("Dev não encontrado.");
+        Sistema sistema = Sistema.getInstance();
+        System.out.println("--- Projetos da equipe ---");
+        for (UsuarioDev dev : equipe) {
+            for (Projeto p : dev.getProjetos()) {
+                System.out.println(p.getInformacoesDetalhadas() + " - Responsável: " + dev.getNome());
+            }
+        }
+        System.out.println("--- Tarefas da equipe ---");
+        for (UsuarioDev dev : equipe) {
+            for (Tarefa t : dev.getTarefas()) {
+                System.out.println(t.getInformacoesDetalhadas() + " - Responsável: " + dev.getNome());
+            }
         }
     }
 
-    public void criarAtribuirTarefa(String nome, java.util.Date prazo, NivelImportancia importancia, int devId) {
-        UsuarioDev dev = buscarDevPorId(devId);
-        if (dev != null) {
-            Tarefa tarefa = new Tarefa(0, nome, prazo, importancia, StatusTarefa.PENDENTE, dev);
-            todasTarefas.add(tarefa);
-            dev.getTarefas().add(tarefa);
-            System.out.println("Tarefa criada e atribuída ao dev " + dev.getNome());
-        } else {
-            System.out.println("Dev não encontrado.");
+    // RF09: criar e atribuir projeto
+    public void criarAtribuirProjeto(String nome, Date prazo, NivelImportancia importancia, int devId) {
+        Sistema sistema = Sistema.getInstance();
+        UsuarioDev dev = sistema.buscarDevPorId(devId);
+        if (dev == null || !equipe.contains(dev)) {
+            System.out.println("Dev não encontrado ou não está na sua equipe.");
+            return;
         }
+        Projeto projeto = new Projeto(nome, prazo, importancia, dev);
+        sistema.adicionarProjeto(projeto);
+        dev.getProjetos().add(projeto);
+        System.out.println("Projeto criado e atribuído ao dev " + dev.getNome());
     }
 
+    // RF09: criar e atribuir tarefa
+    public void criarAtribuirTarefa(String descricao, Date prazo, NivelImportancia importancia, int devId) {
+        Sistema sistema = Sistema.getInstance();
+        UsuarioDev dev = sistema.buscarDevPorId(devId);
+        if (dev == null || !equipe.contains(dev)) {
+            System.out.println("Dev não encontrado ou não está na sua equipe.");
+            return;
+        }
+        Tarefa tarefa = new Tarefa(descricao, prazo, importancia, dev);
+        sistema.adicionarTarefa(tarefa);
+        dev.getTarefas().add(tarefa);
+        System.out.println("Tarefa criada e atribuída ao dev " + dev.getNome());
+    }
+
+    // RF10: processar solicitação de mudança (aprovar ou reprovar)
     public void processarSolicitacaoMudanca(SolicitacaoMudanca solicitacao, boolean aprovado) {
+        if (solicitacao == null || solicitacao.getStatus() != StatusSolicitacao.PENDENTE) {
+            System.out.println("Solicitação inválida ou já processada.");
+            return;
+        }
         solicitacao.setStatus(aprovado ? StatusSolicitacao.APROVADA : StatusSolicitacao.REJEITADA);
-        System.out.println("Solicitação " + solicitacao.getId() + " " + (aprovado ? "aprovada" : "rejeitada"));
+        if (aprovado) {
+            // Aprovação implica em reorganizar as tarefas do dev solicitante? O requisito não especifica.
+            // Vamos apenas registrar a aprovação.
+            System.out.println("Solicitação " + solicitacao.getId() + " APROVADA. Reorganização será feita manualmente pelo gestor.");
+        } else {
+            System.out.println("Solicitação " + solicitacao.getId() + " REJEITADA.");
+        }
     }
 
+    // RF11: validar finalização (mudar status de FEITO para PRONTO)
     public void validarFinalizacao(Object item) {
-        // item pode ser Projeto ou Tarefa
         if (item instanceof Tarefa) {
             Tarefa tarefa = (Tarefa) item;
             if (tarefa.getStatus() == StatusTarefa.FEITO) {
                 tarefa.setStatus(StatusTarefa.PRONTO);
                 System.out.println("Tarefa " + tarefa.getId() + " validada como PRONTA.");
             } else {
-                System.out.println("Tarefa não está com status FEITO.");
+                System.out.println("Tarefa " + tarefa.getId() + " não está com status FEITO (atual: " + tarefa.getStatus() + ")");
             }
         } else if (item instanceof Projeto) {
             Projeto projeto = (Projeto) item;
@@ -66,29 +90,42 @@ public class UsuarioGestor extends Usuario {
                 projeto.setStatus(StatusTarefa.PRONTO);
                 System.out.println("Projeto " + projeto.getId() + " validado como PRONTO.");
             } else {
-                System.out.println("Projeto não está com status FEITO.");
+                System.out.println("Projeto " + projeto.getId() + " não está com status FEITO.");
             }
         }
     }
 
+    // RF12: reatribuir tarefa atrasada para outro dev
     public void reatribuirTarefaAtrasada(Tarefa tarefa, UsuarioDev novoDev) {
-        if (tarefa.getStatus() == StatusTarefa.ATRASADO) {
-            // Remover do dev antigo e adicionar ao novo
-            UsuarioDev antigoDev = tarefa.getDevResponsavel();
-            if (antigoDev != null) antigoDev.getTarefas().remove(tarefa);
-            tarefa.setDevResponsavel(novoDev);
-            novoDev.getTarefas().add(tarefa);
-            System.out.println("Tarefa atrasada " + tarefa.getId() + " reatribuída para " + novoDev.getNome());
-        } else {
-            System.out.println("Esta tarefa não está atrasada.");
+        if (tarefa.getStatus() != StatusTarefa.ATRASADO) {
+            System.out.println("Esta tarefa não está atrasada (status: " + tarefa.getStatus() + ")");
+            return;
         }
+        if (!equipe.contains(tarefa.getDevResponsavel()) || !equipe.contains(novoDev)) {
+            System.out.println("O dev antigo ou o novo dev não pertencem à sua equipe.");
+            return;
+        }
+        UsuarioDev antigoDev = tarefa.getDevResponsavel();
+        antigoDev.getTarefas().remove(tarefa);
+        tarefa.setDevResponsavel(novoDev);
+        novoDev.getTarefas().add(tarefa);
+        System.out.println("Tarefa atrasada " + tarefa.getId() + " reatribuída de " + antigoDev.getNome() + " para " + novoDev.getNome());
     }
 
-    private UsuarioDev buscarDevPorId(int id) {
-        for (UsuarioDev dev : equipe) {
-            if (dev.getId() == id) return dev;
+    // Listar solicitações pendentes (para o gestor decidir)
+    public void listarSolicitacoesPendentes() {
+        Sistema sistema = Sistema.getInstance();
+        List<SolicitacaoMudanca> pendentes = sistema.getSolicitacoes().stream()
+                .filter(s -> s.getStatus() == StatusSolicitacao.PENDENTE)
+                .collect(Collectors.toList());
+        if (pendentes.isEmpty()) {
+            System.out.println("Não há solicitações pendentes.");
+        } else {
+            System.out.println("--- Solicitações Pendentes ---");
+            for (SolicitacaoMudanca s : pendentes) {
+                System.out.println("ID: " + s.getId() + " | De: " + s.getSolicitante().getNome() + " | Justificativa: " + s.getJustificativa());
+            }
         }
-        return null;
     }
 
     // Getters e setters
@@ -96,7 +133,4 @@ public class UsuarioGestor extends Usuario {
     public void setDepartamento(String departamento) { this.departamento = departamento; }
     public List<UsuarioDev> getEquipe() { return equipe; }
     public void setEquipe(List<UsuarioDev> equipe) { this.equipe = equipe; }
-    public List<Projeto> getTodosProjetos() { return todosProjetos; }
-    public List<Tarefa> getTodasTarefas() { return todasTarefas; }
-    public List<SolicitacaoMudanca> getSolicitacoesPendentes() { return solicitacoesPendentes; }
 }
