@@ -6,19 +6,21 @@ public class Sistema {
     private List<Usuario> usuarios;
     private List<UsuarioDev> devs;
     private List<UsuarioGestor> gestores;
-    private List<Relatorio> relatorios;
-    private List<SolicitacaoMudanca> solicitacoes;
     private List<Projeto> projetos;
     private List<Tarefa> tarefas;
+    private List<Relatorio> relatorios;
+    private List<SolicitacaoMudanca> solicitacoes;
+
+    private int proximoIdUsuario = 1; // para simular ID incremental
 
     private Sistema() {
         usuarios = new ArrayList<>();
         devs = new ArrayList<>();
         gestores = new ArrayList<>();
-        relatorios = new ArrayList<>();
-        solicitacoes = new ArrayList<>();
         projetos = new ArrayList<>();
         tarefas = new ArrayList<>();
+        relatorios = new ArrayList<>();
+        solicitacoes = new ArrayList<>();
     }
 
     public static Sistema getInstance() {
@@ -26,9 +28,10 @@ public class Sistema {
         return instance;
     }
 
-    // RF01
+    // RF01: cadastro (gera ID automaticamente)
     public boolean realizarCadastro(Usuario usuario) {
         if (autenticar(usuario.getLogin(), usuario.getSenha()) == null) {
+            usuario.setId(proximoIdUsuario++);
             usuarios.add(usuario);
             if (usuario instanceof UsuarioDev) devs.add((UsuarioDev) usuario);
             else if (usuario instanceof UsuarioGestor) gestores.add((UsuarioGestor) usuario);
@@ -44,31 +47,60 @@ public class Sistema {
                 .orElse(null);
     }
 
-    // RF14 - Gerar relatório diário automático
-    public void gerarRelatorioDiario() {
-        Date hoje = new Date();
-        long tarefasCumpridas = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.PRONTO).count();
-        long tarefasAtrasadas = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
-        String relatorioConteudo = String.format(
-                "Relatório Diário - %s\nTarefas cumpridas: %d\nTarefas atrasadas: %d\nRelatórios enviados por devs: %d",
-                hoje, tarefasCumpridas, tarefasAtrasadas, relatorios.size()
-        );
-        Relatorio relatorio = new Relatorio(relatorios.size() + 1, hoje, relatorioConteudo);
-        relatorios.add(relatorio);
-        System.out.println("Relatório diário gerado: " + relatorioConteudo);
-        // RF16: notificar gestor sobre tarefas FEITO
-        notificarGestorTarefasFeito();
-        // RF17: alertar sobre atrasadas
-        alertarGestorAtrasadas();
+    // Métodos para adicionar objetos (os IDs são gerados dentro das classes)
+    public void adicionarProjeto(Projeto p) { projetos.add(p); }
+    public void adicionarTarefa(Tarefa t) { tarefas.add(t); }
+    public void adicionarRelatorio(Relatorio r) { relatorios.add(r); }
+    public void adicionarSolicitacao(SolicitacaoMudanca s) { solicitacoes.add(s); }
+
+    // Buscas
+    public UsuarioDev buscarDevPorId(int id) {
+        return devs.stream().filter(d -> d.getId() == id).findFirst().orElse(null);
     }
 
-    // RF15 - Automático: alterar status de PENDENTE para ATRASADO ao expirar prazo
+    public UsuarioGestor buscarGestorPorDev(UsuarioDev dev) {
+        for (UsuarioGestor g : gestores) {
+            if (g.getEquipe().contains(dev)) return g;
+        }
+        return null;
+    }
+
+    // RF13 + RF16 + RF17: notificações imediatas
+    public void notificarGestorMudancaStatus(Tarefa tarefa, UsuarioDev dev) {
+        UsuarioGestor gestor = buscarGestorPorDev(dev);
+        if (gestor != null) {
+            System.out.println(">>> NOTIFICAÇÃO para gestor " + gestor.getNome() +
+                    ": O dev " + dev.getNome() + " alterou a tarefa " + tarefa.getId() +
+                    " para " + tarefa.getStatus());
+        }
+        // Também verifica se há tarefas FEITO ou ATRASADO para notificar (RF16 e RF17)
+        verificarItensFeitoEAtrasados(gestor);
+    }
+
+    private void verificarItensFeitoEAtrasados(UsuarioGestor gestor) {
+        if (gestor == null) return;
+        long feitos = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.FEITO).count();
+        if (feitos > 0) {
+            System.out.println(">>> NOTIFICAÇÃO: Existem " + feitos + " tarefas com status FEITO.");
+        }
+        long atrasados = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
+        if (atrasados > 0) {
+            System.out.println(">>> ALERTA: Existem " + atrasados + " tarefas com status ATRASADO.");
+        }
+    }
+
+    // RF15: verificar prazos expirados (chamar no final do expediente)
     public void verificarPrazosExpirados() {
         Date agora = new Date();
         for (Tarefa t : tarefas) {
             if (t.getStatus() == StatusTarefa.PENDENTE && t.getPrazo().before(agora)) {
                 t.setStatus(StatusTarefa.ATRASADO);
                 System.out.println("Tarefa " + t.getId() + " expirou e foi marcada como ATRASADA.");
+                // Notificar gestor imediatamente (RF17)
+                UsuarioGestor gestor = buscarGestorPorDev(t.getDevResponsavel());
+                if (gestor != null) {
+                    System.out.println(">>> ALERTA: Tarefa atrasada notificada ao gestor " + gestor.getNome());
+                }
             }
         }
         for (Projeto p : projetos) {
@@ -79,33 +111,40 @@ public class Sistema {
         }
     }
 
-    // RF13 e RF16
-    private void notificarGestorTarefasFeito() {
-        List<Tarefa> feitas = tarefas.stream()
-                .filter(t -> t.getStatus() == StatusTarefa.FEITO)
-                .collect(Collectors.toList());
-        if (!feitas.isEmpty() && !gestores.isEmpty()) {
-            UsuarioGestor gestor = gestores.get(0); // notifica primeiro gestor
-            System.out.println("NOTIFICAÇÃO para gestor " + gestor.getNome() + ": Existem tarefas com status FEITO: " + feitas);
+    // RF14: gerar relatório diário automático
+    public void gerarRelatorioDiario() {
+        Date hoje = new Date();
+        long tarefasCumpridas = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.PRONTO).count();
+        long tarefasAtrasadas = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
+        long relatoriosEnviados = relatorios.size();
+
+        StringBuilder conteudo = new StringBuilder();
+        conteudo.append("Relatório Diário - ").append(hoje).append("\n");
+        conteudo.append("Tarefas cumpridas (PRONTO): ").append(tarefasCumpridas).append("\n");
+        conteudo.append("Tarefas atrasadas: ").append(tarefasAtrasadas).append("\n");
+        conteudo.append("Relatórios enviados pelos devs: ").append(relatoriosEnviados).append("\n");
+        conteudo.append("Detalhes dos relatórios:\n");
+        for (Relatorio r : relatorios) {
+            conteudo.append("- ").append(r.getConteudo()).append("\n");
+        }
+
+        Relatorio relatorioDiario = new Relatorio(conteudo.toString());
+        relatorioDiario.setDataEnvio(hoje);
+        relatorios.add(relatorioDiario);
+        System.out.println(conteudo.toString());
+
+        // RF16 e RF17 também são emitidos aqui (além das notificações imediatas)
+        for (UsuarioGestor g : gestores) {
+            verificarItensFeitoEAtrasados(g);
         }
     }
 
-    private void alertarGestorAtrasadas() {
-        List<Tarefa> atrasadas = tarefas.stream()
-                .filter(t -> t.getStatus() == StatusTarefa.ATRASADO)
-                .collect(Collectors.toList());
-        if (!atrasadas.isEmpty() && !gestores.isEmpty()) {
-            UsuarioGestor gestor = gestores.get(0);
-            System.out.println("ALERTA para gestor " + gestor.getNome() + ": Existem tarefas ATRASADAS: " + atrasadas);
-        }
-    }
-
-    // Métodos auxiliares para persistência futura
+    // Getters para acesso externo (mas cuidado para não modificar diretamente)
     public List<Usuario> getUsuarios() { return usuarios; }
     public List<UsuarioDev> getDevs() { return devs; }
     public List<UsuarioGestor> getGestores() { return gestores; }
-    public List<Relatorio> getRelatorios() { return relatorios; }
-    public List<SolicitacaoMudanca> getSolicitacoes() { return solicitacoes; }
     public List<Projeto> getProjetos() { return projetos; }
     public List<Tarefa> getTarefas() { return tarefas; }
+    public List<Relatorio> getRelatorios() { return relatorios; }
+    public List<SolicitacaoMudanca> getSolicitacoes() { return solicitacoes; }
 }
