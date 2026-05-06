@@ -33,9 +33,27 @@ public class Projeto {
         return soma / tarefas.size();
     }
 
+    // Retorna total de horas trabalhadas no projeto (soma das horasTrabalhadas das tarefas)
+    public double getTotalHorasTrabalhadas() {
+        double total = 0;
+        for (Tarefa t : tarefas) {
+            total += t.getHorasTrabalhadas();
+        }
+        return total;
+    }
+
+    // Retorna total de horas estimadas no projeto
+    public double getTotalHorasEstimadas() {
+        double total = 0;
+        for (Tarefa t : tarefas) {
+            total += t.getHorasEstimadas();
+        }
+        return total;
+    }
+
     public String getInformacoesDetalhadas() {
-        return String.format("Projeto [ID=%d, Nome=%s, Prazo=%s, Importância=%s, Status=%s, Tarefas=%d]",
-                id, nome, prazo, importancia, status, tarefas.size());
+        return String.format("Projeto [ID=%d, Nome=%s, Prazo=%s, Importância=%s, Status=%s, Progresso=%.1f%%, Tarefas=%d, Horas: %.1f/%.1f]",
+                id, nome, prazo, importancia, status, calcularProgresso(), tarefas.size(), getTotalHorasTrabalhadas(), getTotalHorasEstimadas());
     }
 
     // Getters e Setters
