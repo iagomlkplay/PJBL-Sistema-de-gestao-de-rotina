@@ -36,6 +36,19 @@ public class UsuarioDev extends Usuario {
         }
     }
 
+    // RF04 - visualizar detalhes de um colega específico (ou todos)
+    public void visualizarDetalhesColega(UsuarioDev colega) {
+        System.out.println("=== Detalhes de " + colega.getNome() + " ===");
+        System.out.println("--- Projetos ---");
+        for (Projeto p : colega.getProjetos()) {
+            System.out.println(p.getInformacoesDetalhadas());
+        }
+        System.out.println("--- Tarefas ---");
+        for (Tarefa t : colega.getTarefas()) {
+            System.out.println(t.getInformacoesDetalhadas());
+        }
+    }
+
     // RF05: alterar status de PENDENTE para FEITO (ou outros, mas só permite se não estiver PRONTO)
     public void alterarStatusTarefa(Tarefa tarefa, StatusTarefa novoStatus) {
         if (tarefa == null) {
@@ -53,6 +66,15 @@ public class UsuarioDev extends Usuario {
         }
         StatusTarefa antigo = tarefa.getStatus();
         tarefa.setStatus(novoStatus);
+
+        // Verificar projetos que contêm esta tarefa (para atualizar status do projeto)
+        Sistema sistema = Sistema.getInstance();
+        for (Projeto projeto : sistema.getProjetos()) {
+            if (projeto.getTarefas().contains(tarefa)) {
+                projeto.verificarConclusao();
+            }
+        }
+
         System.out.println("Status da tarefa " + tarefa.getId() + " alterado de " + antigo + " para " + novoStatus);
         // RF13: notificar gestor imediatamente
         Sistema.getInstance().notificarGestorMudancaStatus(tarefa, this);
