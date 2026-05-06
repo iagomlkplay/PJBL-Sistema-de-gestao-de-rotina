@@ -28,11 +28,7 @@ public class Tarefa {
         this.horasTrabalhadas = 0.0;
     }
 
-    /**
-     * Calcula o progresso baseado no tempo:
-     * Se a tarefa está PRONTO ou FEITO -> 100%
-     * Caso contrário, progresso = min( (horasTrabalhadas / horasEstimadas) * 100 , 100 )
-     */
+    // Método para calcular progresso
     public double calcularProgresso() {
         if (status == StatusTarefa.PRONTO || status == StatusTarefa.FEITO) {
             return 100.0;
