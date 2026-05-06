@@ -56,6 +56,22 @@ public class Projeto {
                 id, nome, prazo, importancia, status, calcularProgresso(), tarefas.size(), getTotalHorasTrabalhadas(), getTotalHorasEstimadas());
     }
 
+    public void verificarConclusao() {
+        if (status == StatusTarefa.PRONTO) return;
+        boolean todasProntas = true;
+        for (Tarefa t : tarefas) {
+            if (t.getStatus() != StatusTarefa.PRONTO) {
+                todasProntas = false;
+                break;
+            }
+        }
+        if (todasProntas && !tarefas.isEmpty()) {
+            this.status = StatusTarefa.FEITO;
+            System.out.println("Projeto " + id + " (" + nome + ") concluiu todas as tarefas. Status agora: FEITO. Gestor pode validar para PRONTO.");
+            // RF16: notificar gestor (opcional, chamar sistema)
+        }
+    }
+
     // Getters e Setters
     public int getId() { return id; }
     public String getNome() { return nome; }
