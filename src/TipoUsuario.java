@@ -1,5 +1,4 @@
 public enum TipoUsuario {
-    PENDENTE,
-    APROVADA,
-    REJEITADA
+    DESENVOLVEDOR,
+    GESTOR
 }
