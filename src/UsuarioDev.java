@@ -121,6 +121,14 @@ public class UsuarioDev extends Usuario {
         return count == 0 ? 0 : total / count;
     }
 
+    // Vizualiza as tarefas de um projeto
+    public void visualizarTarefasDoProjeto(Projeto projeto) {
+        System.out.println("=== Tarefas do Projeto: " + projeto.getNome() + " ===");
+        for (Tarefa t : projeto.getTarefas()) {
+            System.out.println(t.getInformacoesDetalhadas());
+        }
+    }
+
     // Getters e setters
     public List<String> getEspecialidades() { return especialidades; }
     public void setEspecialidades(List<String> especialidades) { this.especialidades = especialidades; }
