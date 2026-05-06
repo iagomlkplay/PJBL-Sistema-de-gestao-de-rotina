@@ -65,6 +65,10 @@ public class Sistema {
         return null;
     }
 
+    public Projeto buscarProjetoPorId(int id) {
+        return projetos.stream().filter(p -> p.getId() == id).findFirst().orElse(null);
+    }
+
     // RF13 + RF16 + RF17: notificações imediatas
     public void notificarGestorMudancaStatus(Tarefa tarefa, UsuarioDev dev) {
         UsuarioGestor gestor = buscarGestorPorDev(dev);
