@@ -31,14 +31,17 @@ public class Sistema {
 
     // RF01: cadastro (gera ID automaticamente)
     public boolean realizarCadastro(Usuario usuario) {
-        if (autenticar(usuario.getEmail(), usuario.getSenha()) == null) {
-            usuario.setId(proximoIdUsuario++);
-            usuarios.add(usuario);
-            if (usuario instanceof UsuarioDev) devs.add((UsuarioDev) usuario);
-            else if (usuario instanceof UsuarioGestor) gestores.add((UsuarioGestor) usuario);
-            return true;
+        // Verifica se já existe usuário com o mesmo e-mail
+        boolean emailExiste = usuarios.stream()
+                .anyMatch(u -> u.getEmail().equals(usuario.getEmail()));
+        if (emailExiste) {
+            return false;
         }
-        return false;
+        usuario.setId(proximoIdUsuario++);
+        usuarios.add(usuario);
+        if (usuario instanceof UsuarioDev) devs.add((UsuarioDev) usuario);
+        else if (usuario instanceof UsuarioGestor) gestores.add((UsuarioGestor) usuario);
+        return true;
     }
 
     public Usuario autenticar(String email, String senha) {
