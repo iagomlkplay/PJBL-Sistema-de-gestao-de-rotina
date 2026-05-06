@@ -1,30 +1,35 @@
 import java.util.Date;
 
 public class Tarefa {
+    private static int ultimoId = 0;
     private int id;
     private String descricao;
     private Date prazo;
     private NivelImportancia nivelImportancia;
     private StatusTarefa status;
-    private UsuarioDev devResponsavel; // referência ao dev responsável
+    private UsuarioDev devResponsavel;
 
-    public Tarefa(int id, String descricao, Date prazo, NivelImportancia nivelImportancia, StatusTarefa status, UsuarioDev devResponsavel) {
-        this.id = id;
+    public Tarefa(String descricao, Date prazo, NivelImportancia nivelImportancia, UsuarioDev devResponsavel) {
+        this.id = ++ultimoId;
         this.descricao = descricao;
         this.prazo = prazo;
         this.nivelImportancia = nivelImportancia;
-        this.status = status;
+        this.status = StatusTarefa.PENDENTE;
         this.devResponsavel = devResponsavel;
     }
 
+    public double calcularProgresso() {
+        if (status == StatusTarefa.PRONTO || status == StatusTarefa.FEITO) return 100.0;
+        return 0.0;
+    }
+
     public String getInformacoesDetalhadas() {
-        return String.format("Tarefa [ID=%d, Descrição=%s, Prazo=%s, Importância=%s, Status=%s, Responsável=%s]",
-                id, descricao, prazo, nivelImportancia, status, (devResponsavel != null ? devResponsavel.getNome() : "Nenhum"));
+        return String.format("Tarefa [ID=%d, Descrição=%s, Prazo=%s, Importância=%s, Status=%s]",
+                id, descricao, prazo, nivelImportancia, status);
     }
 
     // Getters e Setters
     public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }
     public Date getPrazo() { return prazo; }
