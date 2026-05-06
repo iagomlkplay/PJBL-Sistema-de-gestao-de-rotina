@@ -6,7 +6,7 @@ Sistema desenvolvido em **Java** para gerenciar projetos, tarefas, prazos e o de
 
 ---
 
-## Requisitos Funcionais (RF) Atendidos
+## Requisitos Funcionais (RF)
 
 ### Acesso e Segurança
 - **RF01:** Cadastro e autenticação de usuários (por e‑mail e senha).
