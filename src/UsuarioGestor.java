@@ -69,8 +69,7 @@ public class UsuarioGestor extends Usuario {
     }
 
     // RF09: criar e atribuir tarefa DENTRO de um projeto com horas estimadas
-    public void criarAtribuirTarefaEmProjeto(String descricao, Date prazo, NivelImportancia importancia,
-                                             int devId, int projetoId, double horasEstimadas) {
+    public void criarAtribuirTarefaEmProjeto(String descricao, Date prazo, NivelImportancia importancia, int devId, int projetoId, double horasEstimadas) {
         Sistema sistema = Sistema.getInstance();
         UsuarioDev dev = sistema.buscarDevPorId(devId);
         Projeto projeto = sistema.buscarProjetoPorId(projetoId);
@@ -78,8 +77,20 @@ public class UsuarioGestor extends Usuario {
             System.out.println("Dev não encontrado ou não está na sua equipe.");
             return;
         }
-        if (projeto == null || !projeto.getDevResponsavel().equals(dev)) {
-            System.out.println("Projeto não encontrado ou não pertence ao dev informado.");
+        if (projeto == null) {
+            System.out.println("Projeto não encontrado.");
+            return;
+        }
+        // Verifica se o projeto pertence a algum dev da equipe (não exige que seja o mesmo dev)
+        boolean projetoPertenceEquipe = false;
+        for (UsuarioDev d : equipe) {
+            if (d.getProjetos().contains(projeto)) {
+                projetoPertenceEquipe = true;
+                break;
+            }
+        }
+        if (!projetoPertenceEquipe) {
+            System.out.println("Projeto não pertence a nenhum dev da sua equipe.");
             return;
         }
         Tarefa tarefa = new Tarefa(descricao, prazo, importancia, dev, horasEstimadas);
