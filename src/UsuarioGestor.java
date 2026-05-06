@@ -4,7 +4,7 @@ import java.util.stream.Collectors;
 
 public class UsuarioGestor extends Usuario {
     private String departamento;
-    private List<UsuarioDev> equipe;      // devs sob sua gestão (referências)
+    private List<UsuarioDev> equipe;
 
     public UsuarioGestor(int id, String nome, String cpf, String email, String senha, String departamento) {
         super(id, nome, cpf, email, senha);
@@ -13,13 +13,16 @@ public class UsuarioGestor extends Usuario {
         this.tipoUsuario = TipoUsuario.GESTOR;
     }
 
-    // RF08: visualizar todos os projetos e tarefas da equipe (com detalhes)
+    // RF08: visualizar todos os projetos da equipe e tarefas (filtrados pelos devs da equipe)
     public void visualizarTodosProjetosTarefas() {
         Sistema sistema = Sistema.getInstance();
         System.out.println("--- Projetos da equipe ---");
-        for (UsuarioDev dev : equipe) {
-            for (Projeto p : dev.getProjetos()) {
-                System.out.println(p.getInformacoesDetalhadas() + " - Responsável: " + dev.getNome());
+        for (Projeto p : sistema.getProjetos()) {
+            // Verifica se o projeto tem pelo menos uma tarefa atribuída a um dev da equipe
+            boolean temTarefaNaEquipe = p.getTarefas().stream()
+                    .anyMatch(t -> equipe.contains(t.getDevResponsavel()));
+            if (temTarefaNaEquipe) {
+                System.out.println(p.getInformacoesDetalhadas());
             }
         }
         System.out.println("--- Tarefas da equipe ---");
@@ -30,26 +33,19 @@ public class UsuarioGestor extends Usuario {
         }
     }
 
-    // RF09: criar e atribuir projeto
-    public void criarAtribuirProjeto(String nome, Date prazo, NivelImportancia importancia, int devId) {
+    // RF09: criar projeto
+    public void criarProjeto(String nome, Date prazo, NivelImportancia importancia) {
         Sistema sistema = Sistema.getInstance();
-        UsuarioDev dev = sistema.buscarDevPorId(devId);
-        if (dev == null || !equipe.contains(dev)) {
-            System.out.println("Dev não encontrado ou não está na sua equipe.");
-            return;
-        }
-        Projeto projeto = new Projeto(nome, prazo, importancia, dev);
+        Projeto projeto = new Projeto(nome, prazo, importancia);
         sistema.adicionarProjeto(projeto);
-        dev.getProjetos().add(projeto);
-        System.out.println("Projeto criado e atribuído ao dev " + dev.getNome());
+        System.out.println("Projeto criado: " + nome + " (ID " + projeto.getId() + ")");
     }
 
-    // RF09: criar e atribuir tarefa sem hora estimada (usa 1.0 hora estimada)
+    // RF09: criar tarefa avulsa (sem projeto)
     public void criarAtribuirTarefa(String descricao, Date prazo, NivelImportancia importancia, int devId) {
         criarAtribuirTarefa(descricao, prazo, importancia, devId, 1.0);
     }
 
-    // RF09: criar e atribuir tarefa com horas estimadas
     public void criarAtribuirTarefa(String descricao, Date prazo, NivelImportancia importancia, int devId, double horasEstimadas) {
         Sistema sistema = Sistema.getInstance();
         UsuarioDev dev = sistema.buscarDevPorId(devId);
@@ -63,13 +59,13 @@ public class UsuarioGestor extends Usuario {
         System.out.println("Tarefa criada com " + horasEstimadas + "h estimadas e atribuída ao dev " + dev.getNome());
     }
 
-    // RF09: criar e atribuir tarefa DENTRO de um projeto sem horas estimadas (usa 1.0 hora estimada)
+    // RF09: criar tarefa dentro de um projeto
     public void criarAtribuirTarefaEmProjeto(String descricao, Date prazo, NivelImportancia importancia, int devId, int projetoId) {
         criarAtribuirTarefaEmProjeto(descricao, prazo, importancia, devId, projetoId, 1.0);
     }
 
-    // RF09: criar e atribuir tarefa DENTRO de um projeto com horas estimadas
-    public void criarAtribuirTarefaEmProjeto(String descricao, Date prazo, NivelImportancia importancia, int devId, int projetoId, double horasEstimadas) {
+    public void criarAtribuirTarefaEmProjeto(String descricao, Date prazo, NivelImportancia importancia,
+                                             int devId, int projetoId, double horasEstimadas) {
         Sistema sistema = Sistema.getInstance();
         UsuarioDev dev = sistema.buscarDevPorId(devId);
         Projeto projeto = sistema.buscarProjetoPorId(projetoId);
@@ -81,18 +77,7 @@ public class UsuarioGestor extends Usuario {
             System.out.println("Projeto não encontrado.");
             return;
         }
-        // Verifica se o projeto pertence a algum dev da equipe (não exige que seja o mesmo dev)
-        boolean projetoPertenceEquipe = false;
-        for (UsuarioDev d : equipe) {
-            if (d.getProjetos().contains(projeto)) {
-                projetoPertenceEquipe = true;
-                break;
-            }
-        }
-        if (!projetoPertenceEquipe) {
-            System.out.println("Projeto não pertence a nenhum dev da sua equipe.");
-            return;
-        }
+        // Gestor pode adicionar tarefa a qualquer projeto
         Tarefa tarefa = new Tarefa(descricao, prazo, importancia, dev, horasEstimadas);
         tarefa.setProjetoPai(projeto);
         sistema.adicionarTarefa(tarefa);
@@ -102,7 +87,7 @@ public class UsuarioGestor extends Usuario {
                 ") com " + horasEstimadas + "h estimadas, atribuída ao dev " + dev.getNome());
     }
 
-    // RF10: processar solicitação de mudança (aprovar ou reprovar)
+    // RF10: processar solicitação de mudança
     public void processarSolicitacaoMudanca(SolicitacaoMudanca solicitacao, boolean aprovado) {
         if (solicitacao == null || solicitacao.getStatus() != StatusSolicitacao.PENDENTE) {
             System.out.println("Solicitação inválida ou já processada.");
@@ -110,15 +95,13 @@ public class UsuarioGestor extends Usuario {
         }
         solicitacao.setStatus(aprovado ? StatusSolicitacao.APROVADA : StatusSolicitacao.REJEITADA);
         if (aprovado) {
-            // Aprovação implica em reorganizar as tarefas do dev solicitante? O requisito não especifica.
-            // Vamos apenas registrar a aprovação.
             System.out.println("Solicitação " + solicitacao.getId() + " APROVADA. Reorganização será feita manualmente pelo gestor.");
         } else {
             System.out.println("Solicitação " + solicitacao.getId() + " REJEITADA.");
         }
     }
 
-    // RF11: validar finalização (mudar status de FEITO para PRONTO)
+    // RF11: validar finalização
     public void validarFinalizacao(Object item) {
         if (item instanceof Tarefa) {
             Tarefa tarefa = (Tarefa) item;
@@ -144,7 +127,7 @@ public class UsuarioGestor extends Usuario {
         }
     }
 
-    // RF12: reatribuir tarefa atrasada para outro dev
+    // RF12: reatribuir tarefa atrasada
     public void reatribuirTarefaAtrasada(Tarefa tarefa, UsuarioDev novoDev) {
         if (tarefa.getStatus() != StatusTarefa.ATRASADO) {
             System.out.println("Esta tarefa não está atrasada (status: " + tarefa.getStatus() + ")");
@@ -161,29 +144,10 @@ public class UsuarioGestor extends Usuario {
         System.out.println("Tarefa atrasada " + tarefa.getId() + " reatribuída de " + antigoDev.getNome() + " para " + novoDev.getNome());
     }
 
-    // RF12 - reatribuir projeto atrasado
-    public void reatribuirProjetoAtrasado(Projeto projeto, UsuarioDev novoDev) {
-        if (projeto.getStatus() != StatusTarefa.ATRASADO) {
-            System.out.println("Este projeto não está atrasado (status: " + projeto.getStatus() + ")");
-            return;
-        }
-        if (!equipe.contains(projeto.getDevResponsavel()) || !equipe.contains(novoDev)) {
-            System.out.println("O dev antigo ou o novo dev não pertencem à sua equipe.");
-            return;
-        }
-        UsuarioDev antigoDev = projeto.getDevResponsavel();
-        antigoDev.getProjetos().remove(projeto);
-        projeto.setDevResponsavel(novoDev);
-        novoDev.getProjetos().add(projeto);
-        System.out.println("Projeto atrasado " + projeto.getId() + " reatribuído de " + antigoDev.getNome() + " para " + novoDev.getNome());
-    }
-
-    // Listar solicitações pendentes (para o gestor decidir)
+    // Listar solicitações pendentes
     public void listarSolicitacoesPendentes() {
         Sistema sistema = Sistema.getInstance();
-        List<SolicitacaoMudanca> pendentes = sistema.getSolicitacoes().stream()
-                .filter(s -> s.getStatus() == StatusSolicitacao.PENDENTE)
-                .collect(Collectors.toList());
+        List<SolicitacaoMudanca> pendentes = sistema.getSolicitacoes().stream().filter(s -> s.getStatus() == StatusSolicitacao.PENDENTE).collect(Collectors.toList());
         if (pendentes.isEmpty()) {
             System.out.println("Não há solicitações pendentes.");
         } else {
