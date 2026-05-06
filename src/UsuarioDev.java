@@ -1,23 +1,29 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class UsuarioDev extends Usuario {
     private List<String> especialidades;
-    private List<Projeto> projetos;      // projetos atribuídos (visão local)
     private List<Tarefa> tarefas;        // tarefas atribuídas (visão local)
 
     public UsuarioDev(int id, String nome, String cpf, String email, String senha) {
         super(id, nome, cpf, email, senha);
         this.especialidades = new ArrayList<>();
-        this.projetos = new ArrayList<>();
         this.tarefas = new ArrayList<>();
         this.tipoUsuario = TipoUsuario.DESENVOLVEDOR;
     }
 
-    // RF04: visualizar seus itens e também os dos colegas
+    // RF04: visualizar seus itens (tarefas e projetos em que participa)
     public void visualizarPropriosProjetosTarefas() {
-        System.out.println("--- Meus Projetos ---");
-        for (Projeto p : projetos) {
+        // Agrupar tarefas por projeto
+        List<Projeto> projetosParticipados = tarefas.stream()
+                .map(Tarefa::getProjetoPai)
+                .filter(p -> p != null)
+                .distinct()
+                .collect(Collectors.toList());
+
+        System.out.println("--- Projetos em que participo ---");
+        for (Projeto p : projetosParticipados) {
             System.out.println(p.getInformacoesDetalhadas() + " - Progresso: " + p.calcularProgresso() + "%");
         }
         System.out.println("--- Minhas Tarefas ---");
@@ -26,7 +32,7 @@ public class UsuarioDev extends Usuario {
         }
     }
 
-    // RF04 (parte de colegas) - mostra todos os devs e seu progresso
+    // RF04 (parte de colegas) - mostra todos os devs e seu progresso (baseado em tarefas)
     public void visualizarProgressoEquipe() {
         Sistema sistema = Sistema.getInstance();
         System.out.println("--- Progresso de todos os Desenvolvedores ---");
@@ -36,11 +42,17 @@ public class UsuarioDev extends Usuario {
         }
     }
 
-    // RF04 - visualizar detalhes de um colega específico (ou todos)
+    // RF04 - visualizar detalhes de um colega específico (suas tarefas e projetos)
     public void visualizarDetalhesColega(UsuarioDev colega) {
         System.out.println("=== Detalhes de " + colega.getNome() + " ===");
+        // Projetos do colega (derivados das tarefas)
+        List<Projeto> projetosColega = colega.getTarefas().stream()
+                .map(Tarefa::getProjetoPai)
+                .filter(p -> p != null)
+                .distinct()
+                .collect(Collectors.toList());
         System.out.println("--- Projetos ---");
-        for (Projeto p : colega.getProjetos()) {
+        for (Projeto p : projetosColega) {
             System.out.println(p.getInformacoesDetalhadas());
         }
         System.out.println("--- Tarefas ---");
@@ -49,13 +61,12 @@ public class UsuarioDev extends Usuario {
         }
     }
 
-    // RF05: alterar status de PENDENTE para FEITO (ou outros, mas só permite se não estiver PRONTO)
+    // RF05: alterar status de tarefa
     public void alterarStatusTarefa(Tarefa tarefa, StatusTarefa novoStatus) {
         if (tarefa == null) {
             System.out.println("Tarefa inválida.");
             return;
         }
-        // Verifica se a tarefa pertence a este dev
         if (!tarefas.contains(tarefa)) {
             System.out.println("Você não pode alterar uma tarefa que não lhe foi atribuída.");
             return;
@@ -67,22 +78,19 @@ public class UsuarioDev extends Usuario {
         StatusTarefa antigo = tarefa.getStatus();
         tarefa.setStatus(novoStatus);
 
-        // Verificar projetos que contêm esta tarefa (para atualizar status do projeto)
-        Sistema sistema = Sistema.getInstance();
-        for (Projeto projeto : sistema.getProjetos()) {
-            if (projeto.getTarefas().contains(tarefa)) {
-                projeto.verificarConclusao();
-            }
+        // Verificar projeto pai para atualizar conclusão
+        Projeto projetoPai = tarefa.getProjetoPai();
+        if (projetoPai != null) {
+            projetoPai.verificarConclusao();
         }
 
         System.out.println("Status da tarefa " + tarefa.getId() + " alterado de " + antigo + " para " + novoStatus);
-        // RF13: notificar gestor imediatamente
         Sistema.getInstance().notificarGestorMudancaStatus(tarefa, this);
     }
 
-    // RF06: enviar relatório final (associado a uma tarefa ou projeto)
+    // RF06: enviar relatório final
     public void enviarRelatorioFinal(Object item, String conteudo) {
-        Relatorio relatorio = new Relatorio(conteudo); // ID gerado automaticamente
+        Relatorio relatorio = new Relatorio(conteudo);
         relatorio.setDataEnvio(new java.util.Date());
         if (item instanceof Tarefa) {
             relatorio.setTarefaRelacionada((Tarefa) item);
@@ -98,30 +106,24 @@ public class UsuarioDev extends Usuario {
         System.out.println("Conteúdo: " + conteudo);
     }
 
-    // RF07: solicitar reorganização (envia pedido ao sistema)
+    // RF07: solicitar reorganização
     public void solicitarReorganizacao(String justificativa) {
         SolicitacaoMudanca solicitacao = new SolicitacaoMudanca(justificativa, this);
         Sistema.getInstance().adicionarSolicitacao(solicitacao);
         System.out.println("Solicitação de reorganização enviada. Justificativa: " + justificativa);
     }
 
-    // Calcula o progresso total baseado em tarefas (cada tarefa 100% quando FEITO/PRONTO)
-    // e projetos (média das tarefas do projeto) - simplificado
+    // Progresso total baseado apenas em tarefas
     public double calcularProgressoTotal() {
-        double total = 0;
-        int count = 0;
+        if (tarefas.isEmpty()) return 0.0;
+        double soma = 0.0;
         for (Tarefa t : tarefas) {
-            total += t.calcularProgresso();
-            count++;
+            soma += t.calcularProgresso();
         }
-        for (Projeto p : projetos) {
-            total += p.calcularProgresso();
-            count++;
-        }
-        return count == 0 ? 0 : total / count;
+        return soma / tarefas.size();
     }
 
-    // Vizualiza as tarefas de um projeto
+    // Visualizar tarefas de um projeto específico
     public void visualizarTarefasDoProjeto(Projeto projeto) {
         System.out.println("=== Tarefas do Projeto: " + projeto.getNome() + " ===");
         for (Tarefa t : projeto.getTarefas()) {
@@ -132,8 +134,6 @@ public class UsuarioDev extends Usuario {
     // Getters e setters
     public List<String> getEspecialidades() { return especialidades; }
     public void setEspecialidades(List<String> especialidades) { this.especialidades = especialidades; }
-    public List<Projeto> getProjetos() { return projetos; }
-    public void setProjetos(List<Projeto> projetos) { this.projetos = projetos; }
     public List<Tarefa> getTarefas() { return tarefas; }
     public void setTarefas(List<Tarefa> tarefas) { this.tarefas = tarefas; }
 }
