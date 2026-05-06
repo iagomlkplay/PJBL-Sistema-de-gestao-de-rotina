@@ -1,4 +1,4 @@
-# 📊 Sistema de Gestão de Rotina
+# Sistema de Gestão de Rotina
 
 Sistema desenvolvido em **Java** para gerenciar projetos, tarefas, prazos e o desempenho de equipes de desenvolvimento. O sistema implementa os papéis de **Desenvolvedor (DEV)** e **Gestor (GESTOR)**, com validação de tarefas, métricas de tempo, notificações automáticas e relatórios diários.
 
