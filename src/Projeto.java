@@ -9,16 +9,14 @@ public class Projeto {
     private Date prazo;
     private NivelImportancia importancia;
     private StatusTarefa status;
-    private UsuarioDev devResponsavel;
     private List<Tarefa> tarefas;
 
-    public Projeto(String nome, Date prazo, NivelImportancia importancia, UsuarioDev devResponsavel) {
+    public Projeto(String nome, Date prazo, NivelImportancia importancia) {
         this.id = ++ultimoId;
         this.nome = nome;
         this.prazo = prazo;
         this.importancia = importancia;
         this.status = StatusTarefa.PENDENTE;
-        this.devResponsavel = devResponsavel;
         this.tarefas = new ArrayList<>();
     }
 
@@ -33,7 +31,6 @@ public class Projeto {
         return soma / tarefas.size();
     }
 
-    // Retorna total de horas trabalhadas no projeto (soma das horasTrabalhadas das tarefas)
     public double getTotalHorasTrabalhadas() {
         double total = 0;
         for (Tarefa t : tarefas) {
@@ -42,7 +39,6 @@ public class Projeto {
         return total;
     }
 
-    // Retorna total de horas estimadas no projeto
     public double getTotalHorasEstimadas() {
         double total = 0;
         for (Tarefa t : tarefas) {
@@ -68,7 +64,6 @@ public class Projeto {
         if (todasProntas && !tarefas.isEmpty()) {
             this.status = StatusTarefa.FEITO;
             System.out.println("Projeto " + id + " (" + nome + ") concluiu todas as tarefas. Status agora: FEITO. Gestor pode validar para PRONTO.");
-            // RF16: notificar gestor (opcional, chamar sistema)
         }
     }
 
@@ -82,8 +77,6 @@ public class Projeto {
     public void setImportancia(NivelImportancia importancia) { this.importancia = importancia; }
     public StatusTarefa getStatus() { return status; }
     public void setStatus(StatusTarefa status) { this.status = status; }
-    public UsuarioDev getDevResponsavel() { return devResponsavel; }
-    public void setDevResponsavel(UsuarioDev devResponsavel) { this.devResponsavel = devResponsavel; }
     public List<Tarefa> getTarefas() { return tarefas; }
     public void setTarefas(List<Tarefa> tarefas) { this.tarefas = tarefas; }
 }
