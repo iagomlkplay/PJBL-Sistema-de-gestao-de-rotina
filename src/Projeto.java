@@ -3,6 +3,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Projeto {
+    private static int ultimoId = 0;
     private int id;
     private String nome;
     private Date prazo;
@@ -11,19 +12,34 @@ public class Projeto {
     private UsuarioDev devResponsavel;
     private List<Tarefa> tarefas;
 
-    public Projeto(int id, String nome, Date prazo, NivelImportancia importancia, StatusTarefa status, UsuarioDev devResponsavel) {
-        this.id = id;
+    public Projeto(String nome, Date prazo, NivelImportancia importancia, UsuarioDev devResponsavel) {
+        this.id = ++ultimoId;
         this.nome = nome;
         this.prazo = prazo;
         this.importancia = importancia;
-        this.status = status;
+        this.status = StatusTarefa.PENDENTE;
         this.devResponsavel = devResponsavel;
         this.tarefas = new ArrayList<>();
     }
 
+    public double calcularProgresso() {
+        if (tarefas.isEmpty()) {
+            return (status == StatusTarefa.PRONTO || status == StatusTarefa.FEITO) ? 100.0 : 0.0;
+        }
+        double soma = 0;
+        for (Tarefa t : tarefas) {
+            soma += t.calcularProgresso();
+        }
+        return soma / tarefas.size();
+    }
+
+    public String getInformacoesDetalhadas() {
+        return String.format("Projeto [ID=%d, Nome=%s, Prazo=%s, Importância=%s, Status=%s, Tarefas=%d]",
+                id, nome, prazo, importancia, status, tarefas.size());
+    }
+
     // Getters e Setters
     public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
     public Date getPrazo() { return prazo; }
