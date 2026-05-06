@@ -44,11 +44,13 @@ public class Tarefa {
 
     // Método para adicionar horas trabalhadas
     public void adicionarHorasTrabalhadas(double horas) {
-        if (horas > 0) {
-            this.horasTrabalhadas += horas;
-            // Se ultrapassar 100%, ainda fica FEITO/PRONTO apenas quando status mudar
-            System.out.println("Tarefa " + id + " agora tem " + horasTrabalhadas + "h trabalhadas de " + horasEstimadas + "h estimadas.");
+        if (horas <= 0) return;
+        if (status == StatusTarefa.FEITO || status == StatusTarefa.PRONTO) {
+            System.out.println("Tarefa " + id + " já está concluída. Não é possível adicionar mais horas.");
+            return;
         }
+        this.horasTrabalhadas += horas;
+        System.out.println("Tarefa " + id + " agora tem " + horasTrabalhadas + "h trabalhadas de " + horasEstimadas + "h estimadas.");
     }
 
     public String getInformacoesDetalhadas() {
