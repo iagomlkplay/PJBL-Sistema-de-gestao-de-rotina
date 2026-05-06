@@ -3,47 +3,103 @@ import java.util.List;
 
 public class UsuarioDev extends Usuario {
     private List<String> especialidades;
-    private List<Projeto> projetos;      // projetos atribuídos a este dev
-    private List<Tarefa> tarefas;        // tarefas atribuídas diretamente
+    private List<Projeto> projetos;      // projetos atribuídos (visão local)
+    private List<Tarefa> tarefas;        // tarefas atribuídas (visão local)
 
     public UsuarioDev(int id, String nome, String cpf, String email, String senha) {
         super(id, nome, cpf, email, senha);
         this.especialidades = new ArrayList<>();
         this.projetos = new ArrayList<>();
         this.tarefas = new ArrayList<>();
+        this.tipoUsuario = TipoUsuario.DESENVOLVEDOR;
     }
 
-    // Métodos do diagrama
+    // RF04: visualizar seus itens e também os dos colegas
     public void visualizarPropriosProjetosTarefas() {
-        // Lógica para exibir projetos e tarefas do dev
-        System.out.println("Projetos: " + projetos);
-        System.out.println("Tarefas: " + tarefas);
-    }
-
-    public void alterarStatusTarefa(Tarefa tarefa, StatusTarefa novoStatus) {
-        if (tarefa != null && tarefa.getStatus() != StatusTarefa.PRONTO) {
-            tarefa.setStatus(novoStatus);
-            System.out.println("Status da tarefa " + tarefa.getId() + " alterado para " + novoStatus);
-            // RF13: notificar gestor será feito pelo sistema (chamada externa)
-        } else {
-            System.out.println("Não é possível alterar status de tarefa já validada ou inválida.");
+        System.out.println("--- Meus Projetos ---");
+        for (Projeto p : projetos) {
+            System.out.println(p.getInformacoesDetalhadas() + " - Progresso: " + p.calcularProgresso() + "%");
+        }
+        System.out.println("--- Minhas Tarefas ---");
+        for (Tarefa t : tarefas) {
+            System.out.println(t.getInformacoesDetalhadas() + " - Progresso: " + t.calcularProgresso() + "%");
         }
     }
 
-    public void enviarRelatorioFinal(Object item, String conteudo) {
-        // item pode ser Projeto ou Tarefa
-        Relatorio relatorio = new Relatorio(0, new java.util.Date(), conteudo);
-        // Salvar relatório e associar ao item (implementação posterior)
-        System.out.println("Relatório final enviado para o item: " + item + " - Conteúdo: " + conteudo);
+    // RF04 (parte de colegas) - mostra todos os devs e seu progresso
+    public void visualizarProgressoEquipe() {
+        Sistema sistema = Sistema.getInstance();
+        System.out.println("--- Progresso de todos os Desenvolvedores ---");
+        for (UsuarioDev dev : sistema.getDevs()) {
+            double progresso = dev.calcularProgressoTotal();
+            System.out.println(dev.getNome() + " (ID " + dev.getId() + ") - Progresso geral: " + progresso + "%");
+        }
     }
 
+    // RF05: alterar status de PENDENTE para FEITO (ou outros, mas só permite se não estiver PRONTO)
+    public void alterarStatusTarefa(Tarefa tarefa, StatusTarefa novoStatus) {
+        if (tarefa == null) {
+            System.out.println("Tarefa inválida.");
+            return;
+        }
+        // Verifica se a tarefa pertence a este dev
+        if (!tarefas.contains(tarefa)) {
+            System.out.println("Você não pode alterar uma tarefa que não lhe foi atribuída.");
+            return;
+        }
+        if (tarefa.getStatus() == StatusTarefa.PRONTO) {
+            System.out.println("Não é possível alterar status de tarefa já validada (PRONTO).");
+            return;
+        }
+        StatusTarefa antigo = tarefa.getStatus();
+        tarefa.setStatus(novoStatus);
+        System.out.println("Status da tarefa " + tarefa.getId() + " alterado de " + antigo + " para " + novoStatus);
+        // RF13: notificar gestor imediatamente
+        Sistema.getInstance().notificarGestorMudancaStatus(tarefa, this);
+    }
+
+    // RF06: enviar relatório final (associado a uma tarefa ou projeto)
+    public void enviarRelatorioFinal(Object item, String conteudo) {
+        Relatorio relatorio = new Relatorio(conteudo); // ID gerado automaticamente
+        relatorio.setDataEnvio(new java.util.Date());
+        if (item instanceof Tarefa) {
+            relatorio.setTarefaRelacionada((Tarefa) item);
+            System.out.println("Relatório final enviado para a tarefa " + ((Tarefa) item).getId());
+        } else if (item instanceof Projeto) {
+            relatorio.setProjetoRelacionado((Projeto) item);
+            System.out.println("Relatório final enviado para o projeto " + ((Projeto) item).getId());
+        } else {
+            System.out.println("Item inválido para relatório.");
+            return;
+        }
+        Sistema.getInstance().adicionarRelatorio(relatorio);
+        System.out.println("Conteúdo: " + conteudo);
+    }
+
+    // RF07: solicitar reorganização (envia pedido ao sistema)
     public void solicitarReorganizacao(String justificativa) {
-        SolicitacaoMudanca solicitacao = new SolicitacaoMudanca(0, justificativa, StatusSolicitacao.PENDENTE, new java.util.Date());
-        // Enviar solicitação para o gestor (armazenar em lista global)
+        SolicitacaoMudanca solicitacao = new SolicitacaoMudanca(justificativa, this);
+        Sistema.getInstance().adicionarSolicitacao(solicitacao);
         System.out.println("Solicitação de reorganização enviada. Justificativa: " + justificativa);
     }
 
-    // Getters e setters adicionais
+    // Calcula o progresso total baseado em tarefas (cada tarefa 100% quando FEITO/PRONTO)
+    // e projetos (média das tarefas do projeto) - simplificado
+    public double calcularProgressoTotal() {
+        double total = 0;
+        int count = 0;
+        for (Tarefa t : tarefas) {
+            total += t.calcularProgresso();
+            count++;
+        }
+        for (Projeto p : projetos) {
+            total += p.calcularProgresso();
+            count++;
+        }
+        return count == 0 ? 0 : total / count;
+    }
+
+    // Getters e setters
     public List<String> getEspecialidades() { return especialidades; }
     public void setEspecialidades(List<String> especialidades) { this.especialidades = especialidades; }
     public List<Projeto> getProjetos() { return projetos; }
