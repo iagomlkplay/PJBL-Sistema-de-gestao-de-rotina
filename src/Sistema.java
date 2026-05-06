@@ -1,5 +1,4 @@
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Sistema {
     private static Sistema instance;
@@ -30,7 +29,7 @@ public class Sistema {
 
     // RF01: cadastro (gera ID automaticamente)
     public boolean realizarCadastro(Usuario usuario) {
-        if (autenticar(usuario.getLogin(), usuario.getSenha()) == null) {
+        if (autenticar(usuario.getEmail(), usuario.getSenha()) == null) {
             usuario.setId(proximoIdUsuario++);
             usuarios.add(usuario);
             if (usuario instanceof UsuarioDev) devs.add((UsuarioDev) usuario);
@@ -40,9 +39,9 @@ public class Sistema {
         return false;
     }
 
-    public Usuario autenticar(String login, String senha) {
+    public Usuario autenticar(String email, String senha) {
         return usuarios.stream()
-                .filter(u -> u.getLogin().equals(login) && u.getSenha().equals(senha))
+                .filter(u -> u.getEmail().equals(email) && u.getSenha().equals(senha))
                 .findFirst()
                 .orElse(null);
     }
