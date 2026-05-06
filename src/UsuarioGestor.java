@@ -44,7 +44,7 @@ public class UsuarioGestor extends Usuario {
         System.out.println("Projeto criado e atribuído ao dev " + dev.getNome());
     }
 
-    // RF09: criar e atribuir tarefa (compatibilidade, usa 1.0 hora estimada)
+    // RF09: criar e atribuir tarefa sem hora estimada (usa 1.0 hora estimada)
     public void criarAtribuirTarefa(String descricao, Date prazo, NivelImportancia importancia, int devId) {
         criarAtribuirTarefa(descricao, prazo, importancia, devId, 1.0);
     }
@@ -61,6 +61,34 @@ public class UsuarioGestor extends Usuario {
         sistema.adicionarTarefa(tarefa);
         dev.getTarefas().add(tarefa);
         System.out.println("Tarefa criada com " + horasEstimadas + "h estimadas e atribuída ao dev " + dev.getNome());
+    }
+
+    // RF09: criar e atribuir tarefa DENTRO de um projeto sem horas estimadas (usa 1.0 hora estimada)
+    public void criarAtribuirTarefaEmProjeto(String descricao, Date prazo, NivelImportancia importancia, int devId, int projetoId) {
+        criarAtribuirTarefaEmProjeto(descricao, prazo, importancia, devId, projetoId, 1.0);
+    }
+
+    // RF09: criar e atribuir tarefa DENTRO de um projeto com horas estimadas
+    public void criarAtribuirTarefaEmProjeto(String descricao, Date prazo, NivelImportancia importancia,
+                                             int devId, int projetoId, double horasEstimadas) {
+        Sistema sistema = Sistema.getInstance();
+        UsuarioDev dev = sistema.buscarDevPorId(devId);
+        Projeto projeto = sistema.buscarProjetoPorId(projetoId);
+        if (dev == null || !equipe.contains(dev)) {
+            System.out.println("Dev não encontrado ou não está na sua equipe.");
+            return;
+        }
+        if (projeto == null || !projeto.getDevResponsavel().equals(dev)) {
+            System.out.println("Projeto não encontrado ou não pertence ao dev informado.");
+            return;
+        }
+        Tarefa tarefa = new Tarefa(descricao, prazo, importancia, dev, horasEstimadas);
+        tarefa.setProjetoPai(projeto);
+        sistema.adicionarTarefa(tarefa);
+        dev.getTarefas().add(tarefa);
+        projeto.getTarefas().add(tarefa);
+        System.out.println("Tarefa adicionada ao projeto " + projeto.getNome() + " (ID " + projeto.getId() +
+                ") com " + horasEstimadas + "h estimadas, atribuída ao dev " + dev.getNome());
     }
 
     // RF10: processar solicitação de mudança (aprovar ou reprovar)
