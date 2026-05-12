@@ -112,4 +112,17 @@ public class UsuarioDAO {
             return dev;
         }
     }
+
+    public Usuario buscarPorEmail(String email) throws SQLException {
+        String sql = "SELECT * FROM usuarios WHERE email = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return construirUsuario(rs);
+            }
+        }
+        return null;
+    }
 }
