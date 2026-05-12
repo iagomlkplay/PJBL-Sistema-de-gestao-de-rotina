@@ -1,5 +1,7 @@
 import java.util.Date;
 import java.util.List;
+import java.util.ArrayList;
+import java.sql.SQLException;
 import java.util.stream.Collectors;
 
 public class UsuarioGestor extends Usuario {
@@ -10,7 +12,7 @@ public class UsuarioGestor extends Usuario {
     public UsuarioGestor(int id, String nome, String cpf, String email, String senha, String departamento) {
         super(id, nome, cpf, email, senha);
         this.departamento = departamento;
-        this.equipe = new java.util.ArrayList<>();
+        this.equipe = new ArrayList<>();
         this.tipoUsuario = TipoUsuario.GESTOR;
     }
 
@@ -18,8 +20,19 @@ public class UsuarioGestor extends Usuario {
     public UsuarioGestor(String nome, String cpf, String email, String senha, String departamento) {
         super(nome, cpf, email, senha);
         this.departamento = departamento;
-        this.equipe = new java.util.ArrayList<>();
+        this.equipe = new ArrayList<>();
         this.tipoUsuario = TipoUsuario.GESTOR;
+    }
+
+    // Carrega a equipe a partir do banco (chamar após obter o ID)
+    public void carregarEquipe() {
+        try {
+            UsuarioDAO dao = new UsuarioDAO();
+            equipe = dao.listarDevsPorGestor(this.getId());
+        } catch (SQLException e) {
+            System.err.println("Erro ao carregar equipe: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     // RF08: visualizar todos os projetos da equipe e tarefas
@@ -27,7 +40,6 @@ public class UsuarioGestor extends Usuario {
         Sistema sistema = Sistema.getInstance();
         System.out.println("--- Projetos da equipe ---");
         for (Projeto p : sistema.getProjetos()) {
-            // Verifica se o projeto tem pelo menos uma tarefa atribuída a um dev da equipe
             boolean temTarefaNaEquipe = p.getTarefas().stream()
                     .anyMatch(t -> equipe.contains(t.getDevResponsavel()));
             if (temTarefaNaEquipe) {
