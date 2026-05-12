@@ -2,26 +2,18 @@ import java.util.*;
 
 public class Sistema {
     private static Sistema instance;
-    private List<Usuario> usuarios;
-    private List<UsuarioDev> devs;
-    private List<UsuarioGestor> gestores;
-    private List<Projeto> projetos;
-    private List<Tarefa> tarefas;
-    private List<Relatorio> relatorios;
-    private List<SolicitacaoMudanca> solicitacoes;
-    private List<Relatorio> relatoriosDiarios;
-
-    private int proximoIdUsuario = 1; // para simular ID incremental
+    private UsuarioDAO usuarioDAO;
+    private ProjetoDAO projetoDAO;
+    private TarefaDAO tarefaDAO;
+    private RelatorioDAO relatorioDAO;
+    private SolicitacaoDAO solicitacaoDAO;
 
     private Sistema() {
-        usuarios = new ArrayList<>();
-        devs = new ArrayList<>();
-        gestores = new ArrayList<>();
-        projetos = new ArrayList<>();
-        tarefas = new ArrayList<>();
-        relatorios = new ArrayList<>();
-        solicitacoes = new ArrayList<>();
-        relatoriosDiarios = new ArrayList<>();
+        usuarioDAO = new UsuarioDAO();
+        projetoDAO = new ProjetoDAO();
+        tarefaDAO = new TarefaDAO();
+        relatorioDAO = new RelatorioDAO();
+        solicitacaoDAO = new SolicitacaoDAO();
     }
 
     public static Sistema getInstance() {
@@ -29,51 +21,170 @@ public class Sistema {
         return instance;
     }
 
-    // RF01: cadastro (gera ID automaticamente)
+    // === RF01: Cadastro e autenticação ===
     public boolean realizarCadastro(Usuario usuario) {
-        // Verifica se já existe usuário com o mesmo e-mail
-        boolean emailExiste = usuarios.stream()
-                .anyMatch(u -> u.getEmail().equals(usuario.getEmail()));
-        if (emailExiste) {
+        try {
+            // Verifica se e-mail já existe
+            if (usuarioDAO.buscarPorEmail(usuario.getEmail()) != null) {
+                return false;
+            }
+            usuarioDAO.inserir(usuario);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
-        usuario.setId(proximoIdUsuario++);
-        usuarios.add(usuario);
-        if (usuario instanceof UsuarioDev) devs.add((UsuarioDev) usuario);
-        else if (usuario instanceof UsuarioGestor) gestores.add((UsuarioGestor) usuario);
-        return true;
     }
 
     public Usuario autenticar(String email, String senha) {
-        return usuarios.stream()
-                .filter(u -> u.getEmail().equals(email) && u.getSenha().equals(senha))
-                .findFirst()
-                .orElse(null);
-    }
-
-    // Métodos para adicionar objetos (os IDs são gerados dentro das classes)
-    public void adicionarProjeto(Projeto p) { projetos.add(p); }
-    public void adicionarTarefa(Tarefa t) { tarefas.add(t); }
-    public void adicionarRelatorio(Relatorio r) { relatorios.add(r); }
-    public void adicionarSolicitacao(SolicitacaoMudanca s) { solicitacoes.add(s); }
-
-    // Buscas
-    public UsuarioDev buscarDevPorId(int id) {
-        return devs.stream().filter(d -> d.getId() == id).findFirst().orElse(null);
-    }
-
-    public UsuarioGestor buscarGestorPorDev(UsuarioDev dev) {
-        for (UsuarioGestor g : gestores) {
-            if (g.getEquipe().contains(dev)) return g;
+        try {
+            return usuarioDAO.autenticar(email, senha);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
-        return null;
+    }
+
+    // === Métodos de adição (delegam para DAOs) ===
+    public void adicionarProjeto(Projeto p) {
+        try {
+            projetoDAO.inserir(p);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void adicionarTarefa(Tarefa t) {
+        try {
+            tarefaDAO.inserir(t);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void adicionarRelatorio(Relatorio r) {
+        try {
+            relatorioDAO.inserir(r);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void adicionarSolicitacao(SolicitacaoMudanca s) {
+        try {
+            solicitacaoDAO.inserir(s);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // === Buscas ===
+    public UsuarioDev buscarDevPorId(int id) {
+        try {
+            Usuario u = usuarioDAO.buscarPorId(id);
+            return (u instanceof UsuarioDev) ? (UsuarioDev) u : null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public Projeto buscarProjetoPorId(int id) {
-        return projetos.stream().filter(p -> p.getId() == id).findFirst().orElse(null);
+        try {
+            return projetoDAO.buscarPorId(id);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
-    // RF13 + RF16 + RF17: notificações imediatas
+    // Localiza o gestor responsável por um dev (baseado na coluna gestor_id)
+    public UsuarioGestor buscarGestorPorDev(UsuarioDev dev) {
+        try {
+            int gestorId = dev.getGestorId();
+            if (gestorId == 0) return null;
+            Usuario u = usuarioDAO.buscarPorId(gestorId);
+            return (u instanceof UsuarioGestor) ? (UsuarioGestor) u : null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // === Listagens (consultas ao banco) ===
+    public List<Usuario> getUsuarios() {
+        try {
+            return usuarioDAO.listarTodos();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<UsuarioDev> getDevs() {
+        try {
+            List<UsuarioDev> devs = new ArrayList<>();
+            for (Usuario u : usuarioDAO.listarTodos()) {
+                if (u instanceof UsuarioDev) devs.add((UsuarioDev) u);
+            }
+            return devs;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<UsuarioGestor> getGestores() {
+        try {
+            List<UsuarioGestor> gestores = new ArrayList<>();
+            for (Usuario u : usuarioDAO.listarTodos()) {
+                if (u instanceof UsuarioGestor) gestores.add((UsuarioGestor) u);
+            }
+            return gestores;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Projeto> getProjetos() {
+        try {
+            return projetoDAO.listarTodos();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Tarefa> getTarefas() {
+        try {
+            // Retorna todas as tarefas (com dados básicos)
+            return tarefaDAO.listarTodas();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Relatorio> getRelatorios() {
+        try {
+            return relatorioDAO.listarTodos();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<SolicitacaoMudanca> getSolicitacoes() {
+        try {
+            return solicitacaoDAO.listarTodos();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    // === Notificações ===
     public void notificarGestorMudancaStatus(Tarefa tarefa, UsuarioDev dev) {
         UsuarioGestor gestor = buscarGestorPorDev(dev);
         if (gestor != null) {
@@ -81,82 +192,86 @@ public class Sistema {
                     ": O dev " + dev.getNome() + " alterou a tarefa " + tarefa.getId() +
                     " para " + tarefa.getStatus());
         }
-        // Também verifica se há tarefas FEITO ou ATRASADO para notificar (RF16 e RF17)
         verificarItensFeitoEAtrasados(gestor);
     }
 
     private void verificarItensFeitoEAtrasados(UsuarioGestor gestor) {
         if (gestor == null) return;
-        long feitos = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.FEITO).count();
-        if (feitos > 0) {
-            System.out.println(">>> NOTIFICAÇÃO: Existem " + feitos + " tarefas com status FEITO.");
-        }
-        long atrasados = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
-        if (atrasados > 0) {
-            System.out.println(">>> ALERTA: Existem " + atrasados + " tarefas com status ATRASADO.");
+        try {
+            List<Tarefa> todasTarefas = getTarefas();
+            long feitos = todasTarefas.stream().filter(t -> t.getStatus() == StatusTarefa.FEITO).count();
+            if (feitos > 0) {
+                System.out.println(">>> NOTIFICAÇÃO: Existem " + feitos + " tarefas com status FEITO.");
+            }
+            long atrasados = todasTarefas.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
+            if (atrasados > 0) {
+                System.out.println(">>> ALERTA: Existem " + atrasados + " tarefas com status ATRASADO.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    // RF15: verificar prazos expirados (chamar no final do expediente)
+    // === Expiração de prazos ===
     public void verificarPrazosExpirados() {
         Date agora = new Date();
-        for (Tarefa t : tarefas) {
-            if (t.getStatus() == StatusTarefa.PENDENTE && t.getPrazo().before(agora)) {
-                t.setStatus(StatusTarefa.ATRASADO);
-                System.out.println("Tarefa " + t.getId() + " expirou e foi marcada como ATRASADA.");
-                // Notificar gestor imediatamente (RF17)
-                UsuarioGestor gestor = buscarGestorPorDev(t.getDevResponsavel());
-                if (gestor != null) {
-                    System.out.println(">>> ALERTA: Tarefa atrasada notificada ao gestor " + gestor.getNome());
+        try {
+            // Tarefas
+            List<Tarefa> todasTarefas = getTarefas();
+            for (Tarefa t : todasTarefas) {
+                if (t.getStatus() == StatusTarefa.PENDENTE && t.getPrazo().before(agora)) {
+                    t.setStatus(StatusTarefa.ATRASADO);
+                    tarefaDAO.atualizarStatus(t.getId(), StatusTarefa.ATRASADO);
+                    System.out.println("Tarefa " + t.getId() + " expirou e foi marcada como ATRASADA.");
+                    UsuarioGestor gestor = buscarGestorPorDev(t.getDevResponsavel());
+                    if (gestor != null) {
+                        System.out.println(">>> ALERTA: Tarefa atrasada notificada ao gestor " + gestor.getNome());
+                    }
                 }
             }
-        }
-        for (Projeto p : projetos) {
-            if (p.getStatus() == StatusTarefa.PENDENTE && p.getPrazo().before(agora)) {
-                p.setStatus(StatusTarefa.ATRASADO);
-                System.out.println("Projeto " + p.getId() + " expirou e foi marcado como ATRASADO.");
+            // Projetos
+            List<Projeto> todosProjetos = getProjetos();
+            for (Projeto p : todosProjetos) {
+                if (p.getStatus() == StatusTarefa.PENDENTE && p.getPrazo().before(agora)) {
+                    p.setStatus(StatusTarefa.ATRASADO);
+                    projetoDAO.atualizarStatus(p.getId(), StatusTarefa.ATRASADO);
+                    System.out.println("Projeto " + p.getId() + " expirou e foi marcado como ATRASADO.");
+                }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    // RF14: gerar relatório diário automático
+    // === Relatório Diário ===
     public void gerarRelatorioDiario() {
         Date hoje = new Date();
-        long tarefasCumpridas = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.PRONTO).count();
-        long tarefasAtrasadas = tarefas.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
-        long relatoriosEnviados = relatorios.size(); // relatórios enviados por devs (RF06)
+        try {
+            List<Tarefa> todasTarefas = getTarefas();
+            long tarefasCumpridas = todasTarefas.stream().filter(t -> t.getStatus() == StatusTarefa.PRONTO).count();
+            long tarefasAtrasadas = todasTarefas.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
+            long relatoriosEnviados = getRelatorios().size();
 
-        StringBuilder conteudo = new StringBuilder();
-        conteudo.append("Relatório Diário - ").append(hoje).append("\n");
-        conteudo.append("Tarefas cumpridas (PRONTO): ").append(tarefasCumpridas).append("\n");
-        conteudo.append("Tarefas atrasadas: ").append(tarefasAtrasadas).append("\n");
-        conteudo.append("Relatórios enviados pelos devs: ").append(relatoriosEnviados).append("\n");
-        conteudo.append("Detalhes dos relatórios dos devs:\n");
-        for (Relatorio r : relatorios) {
-            conteudo.append("- ").append(r.getConteudo()).append("\n");
-        }
+            StringBuilder conteudo = new StringBuilder();
+            conteudo.append("Relatório Diário - ").append(hoje).append("\n");
+            conteudo.append("Tarefas cumpridas (PRONTO): ").append(tarefasCumpridas).append("\n");
+            conteudo.append("Tarefas atrasadas: ").append(tarefasAtrasadas).append("\n");
+            conteudo.append("Relatórios enviados pelos devs: ").append(relatoriosEnviados).append("\n");
+            conteudo.append("Detalhes dos relatórios dos devs:\n");
+            for (Relatorio r : getRelatorios()) {
+                conteudo.append("- ").append(r.getConteudo()).append("\n");
+            }
 
-        // Cria e armazena o relatório diário em uma lista separada (histórico)
-        Relatorio relatorioDiario = new Relatorio(conteudo.toString());
-        relatorioDiario.setDataEnvio(hoje);
-        relatoriosDiarios.add(relatorioDiario);
+            Relatorio relatorioDiario = new Relatorio(conteudo.toString());
+            relatorioDiario.setDataEnvio(hoje);
+            relatorioDAO.inserir(relatorioDiario);
+            System.out.println(conteudo.toString());
 
-        // Imprime o relatório diário (opcional)
-        System.out.println(conteudo.toString());
-
-        // RF16 e RF17 também são emitidos aqui (além das notificações imediatas)
-        for (UsuarioGestor g : gestores) {
-            verificarItensFeitoEAtrasados(g);
+            for (UsuarioGestor g : getGestores()) {
+                verificarItensFeitoEAtrasados(g);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
-
-    // Getters para acesso externo
-    public List<Usuario> getUsuarios() { return usuarios; }
-    public List<UsuarioDev> getDevs() { return devs; }
-    public List<UsuarioGestor> getGestores() { return gestores; }
-    public List<Projeto> getProjetos() { return projetos; }
-    public List<Tarefa> getTarefas() { return tarefas; }
-    public List<Relatorio> getRelatorios() { return relatorios; }
-    public List<SolicitacaoMudanca> getSolicitacoes() { return solicitacoes; }
-    public List<Relatorio> getRelatoriosDiarios() { return relatoriosDiarios; }
 }
