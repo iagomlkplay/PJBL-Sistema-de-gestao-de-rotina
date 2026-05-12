@@ -25,9 +25,11 @@ public class SolicitacaoDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
+            UsuarioDAO usuarioDAO = new UsuarioDAO();
             while (rs.next()) {
-                // Nota: o solicitante não é carregado aqui; deixaremos nulo para simplificar
-                SolicitacaoMudanca s = new SolicitacaoMudanca(rs.getString("justificativa"), null);
+                int solicitanteId = rs.getInt("dev_solicitante_id");
+                UsuarioDev solicitante = (UsuarioDev) usuarioDAO.buscarPorId(solicitanteId);
+                SolicitacaoMudanca s = new SolicitacaoMudanca(rs.getString("justificativa"), solicitante);
                 s.setId(rs.getInt("id"));
                 s.setStatus(StatusSolicitacao.valueOf(rs.getString("status")));
                 s.setDataCriacao(rs.getTimestamp("data_criacao"));
