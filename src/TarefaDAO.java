@@ -84,7 +84,33 @@ public class TarefaDAO {
         return lista;
     }
 
-    // Método listarTodas que retorna lista de todas as tarefas)
+    // Listar tarefas por projeto
+    public List<Tarefa> listarPorProjeto(int projetoId, UsuarioDAO usuarioDAO, ProjetoDAO projetoDAO) throws SQLException {
+        List<Tarefa> lista = new ArrayList<>();
+        String sql = "SELECT * FROM tarefas WHERE projeto_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, projetoId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                UsuarioDev dev = (UsuarioDev) usuarioDAO.buscarPorId(rs.getInt("dev_responsavel_id"));
+                Projeto projeto = projetoDAO.buscarPorId(projetoId);
+                lista.add(new Tarefa(
+                        rs.getInt("id"),
+                        rs.getString("descricao"),
+                        rs.getDate("prazo"),
+                        NivelImportancia.valueOf(rs.getString("nivel_importancia")),
+                        StatusTarefa.valueOf(rs.getString("status")),
+                        dev,
+                        rs.getDouble("horas_estimadas"),
+                        rs.getDouble("horas_trabalhadas"),
+                        projeto
+                ));
+            }
+        }
+        return lista;
+    }
+
     public List<Tarefa> listarTodas() throws SQLException {
         List<Tarefa> lista = new ArrayList<>();
         String sql = "SELECT * FROM tarefas";
@@ -92,19 +118,16 @@ public class TarefaDAO {
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                // Nota: para simplificar, não carregamos os objetos relacionados (dev, projeto) aqui.
-                // Criamos uma tarefa parcial com os dados básicos.
                 Tarefa t = new Tarefa(
                         rs.getString("descricao"),
                         rs.getDate("prazo"),
                         NivelImportancia.valueOf(rs.getString("nivel_importancia")),
-                        null, // devResponsavel será preenchido depois, se necessário
+                        null,
                         rs.getDouble("horas_estimadas")
                 );
                 t.setId(rs.getInt("id"));
                 t.setStatus(StatusTarefa.valueOf(rs.getString("status")));
                 t.setHorasTrabalhadas(rs.getDouble("horas_trabalhadas"));
-                // projetoPai pode ser obtido depois, se necessário
                 lista.add(t);
             }
         }
