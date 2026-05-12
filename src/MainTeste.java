@@ -1,10 +1,9 @@
-import java.sql.SQLException;
 import java.util.Date;
 import java.util.Calendar;
 import java.util.List;
+import java.sql.SQLException;
 
 public class MainTeste {
-
     private static Sistema sistema = Sistema.getInstance();
     private static UsuarioDAO usuarioDAO = new UsuarioDAO();
     private static ProjetoDAO projetoDAO = new ProjetoDAO();
@@ -12,79 +11,72 @@ public class MainTeste {
     private static RelatorioDAO relatorioDAO = new RelatorioDAO();
     private static SolicitacaoDAO solicitacaoDAO = new SolicitacaoDAO();
 
+    // Altere para false se NÃO quiser limpar as tabelas no início
+    private static final boolean LIMPAR_BANCO = true;
+
     public static void main(String[] args) {
         try {
-            System.out.println("=== TESTE COMPLETO DO SISTEMA COM PERSISTÊNCIA ===\n");
+            if (LIMPAR_BANCO) {
+                System.out.println("=== LIMPANDO TABELAS (dados anteriores serão removidos) ===");
+                limparBanco();
+                System.out.println("Banco limpo.\n");
+            }
 
-            // 1. Reset do banco (opcional, com aviso)
-            System.out.println("Limpando tabelas... (serão removidos todos os dados existentes)");
-            limparBanco();
-            System.out.println("Banco limpo.\n");
+            System.out.println("=== TESTE COMPLETO DO SISTEMA ===\n");
 
-            // 2. Cadastrar usuários
+            // 1. Cadastro de usuários
             System.out.println("--- Cadastro de usuários ---");
-            UsuarioGestor gestor1 = new UsuarioGestor("Gestor TI", "111.111.111-11", "ti@empresa.com", "123", "TI");
-            sistema.realizarCadastro(gestor1);
-            System.out.println("Gestor cadastrado: " + gestor1.getNome() + " (ID " + gestor1.getId() + ")");
+            UsuarioGestor gestor = new UsuarioGestor("Gestor TI", "111.111.111-11", "ti@empresa.com", "123", "TI");
+            sistema.realizarCadastro(gestor);
+            System.out.println("Gestor cadastrado: " + gestor.getNome() + " (ID " + gestor.getId() + ")");
 
-            UsuarioDev dev1 = new UsuarioDev("Ana Souza", "222.222.222-22", "ana@empresa.com", "123");
-            dev1.setGestorId(gestor1.getId());
-            sistema.realizarCadastro(dev1);
-            System.out.println("Dev cadastrado: " + dev1.getNome() + " (ID " + dev1.getId() + ")");
+            UsuarioDev devAna = new UsuarioDev("Ana Souza", "222.222.222-22", "ana@empresa.com", "123");
+            devAna.setGestorId(gestor.getId());
+            sistema.realizarCadastro(devAna);
+            System.out.println("Dev cadastrado: " + devAna.getNome() + " (ID " + devAna.getId() + ")");
 
-            UsuarioDev dev2 = new UsuarioDev("Bruno Lima", "333.333.333-33", "bruno@empresa.com", "123");
-            dev2.setGestorId(gestor1.getId());
-            sistema.realizarCadastro(dev2);
-            System.out.println("Dev cadastrado: " + dev2.getNome() + " (ID " + dev2.getId() + ")");
+            UsuarioDev devBruno = new UsuarioDev("Bruno Lima", "333.333.333-33", "bruno@empresa.com", "123");
+            devBruno.setGestorId(gestor.getId());
+            sistema.realizarCadastro(devBruno);
+            System.out.println("Dev cadastrado: " + devBruno.getNome() + " (ID " + devBruno.getId() + ")");
 
-            // CORREÇÃO: carregar equipe do gestor (busca os devs do banco e preenche a lista)
-            gestor1.carregarEquipe();
-
-            // 3. Criar projetos
+            // 2. Criar projetos
             System.out.println("\n--- Criação de projetos ---");
-            Date prazoCurto = addDias(5);
             Date prazoLongo = addDias(30);
+            Date prazoCurto = addDias(5);
+            gestor.criarProjeto("Sistema de Vendas", prazoLongo, NivelImportancia.ALTA);
+            gestor.criarProjeto("App Mobile", prazoCurto, NivelImportancia.URGENTE);
 
-            gestor1.criarProjeto("Sistema de Vendas", prazoLongo, NivelImportancia.ALTA);
-            gestor1.criarProjeto("App Mobile", prazoCurto, NivelImportancia.URGENTE);
-
-            // Recuperar projetos recém-criados
             Projeto projetoVendas = projetoDAO.listarTodos().get(0);
             Projeto projetoMobile = projetoDAO.listarTodos().get(1);
             System.out.println("Projetos criados: " + projetoVendas.getNome() + " (ID " + projetoVendas.getId() + "), "
                     + projetoMobile.getNome() + " (ID " + projetoMobile.getId() + ")");
 
-            // 4. Criar tarefas (dentro dos projetos e avulsas)
+            // 3. Criar tarefas
             System.out.println("\n--- Criação de tarefas ---");
+            // Dentro do projeto Vendas
+            gestor.criarAtribuirTarefaEmProjeto("Backend - Produtos", prazoLongo, NivelImportancia.ALTA,
+                    devAna.getId(), projetoVendas.getId(), 20.0);
+            gestor.criarAtribuirTarefaEmProjeto("Frontend - Carrinho", prazoLongo, NivelImportancia.MEDIA,
+                    devBruno.getId(), projetoVendas.getId(), 15.0);
+            // Dentro do projeto Mobile (prazo curto)
+            gestor.criarAtribuirTarefaEmProjeto("Tela de login", prazoCurto, NivelImportancia.URGENTE,
+                    devAna.getId(), projetoMobile.getId(), 8.0);
+            gestor.criarAtribuirTarefaEmProjeto("Integração com API", prazoCurto, NivelImportancia.URGENTE,
+                    devBruno.getId(), projetoMobile.getId(), 12.0);
+            // Tarefa avulsa
+            gestor.criarAtribuirTarefa("Documentação técnica", prazoLongo, NivelImportancia.BAIXA,
+                    devAna.getId(), 5.0);
 
-            // Tarefas do projeto Vendas
-            gestor1.criarAtribuirTarefaEmProjeto("Backend - Produtos", prazoLongo, NivelImportancia.ALTA,
-                    dev1.getId(), projetoVendas.getId(), 20.0);
-            gestor1.criarAtribuirTarefaEmProjeto("Frontend - Carrinho", prazoLongo, NivelImportancia.MEDIA,
-                    dev2.getId(), projetoVendas.getId(), 15.0);
-
-            // Tarefas do projeto Mobile (prazo curto)
-            gestor1.criarAtribuirTarefaEmProjeto("Tela de login", prazoCurto, NivelImportancia.URGENTE,
-                    dev1.getId(), projetoMobile.getId(), 8.0);
-            gestor1.criarAtribuirTarefaEmProjeto("Integração com API", prazoCurto, NivelImportancia.URGENTE,
-                    dev2.getId(), projetoMobile.getId(), 12.0);
-
-            // Tarefas avulsas
-            gestor1.criarAtribuirTarefa("Documentação técnica", prazoLongo, NivelImportancia.BAIXA,
-                    dev1.getId(), 5.0);
-
-            // 5. Simular horas trabalhadas (pelo dev)
+            // 4. Registrar horas trabalhadas
             System.out.println("\n--- Registro de horas trabalhadas ---");
-            // Buscar as tarefas da Ana (dev1)
-            List<Tarefa> tarefasAna = tarefaDAO.listarPorDev(dev1.getId(), usuarioDAO, projetoDAO);
+            List<Tarefa> tarefasAna = tarefaDAO.listarPorDev(devAna.getId(), usuarioDAO, projetoDAO);
             for (Tarefa t : tarefasAna) {
                 t.adicionarHorasTrabalhadas(3.0);
                 System.out.println("   " + t.getDescricao() + " - horas: " + t.getHorasTrabalhadas());
-                // Adiciona a tarefa à lista do dev (sincroniza o objeto em memória)
-                dev1.getTarefas().add(t);
             }
 
-            // 6. Marcar algumas tarefas como FEITO
+            // 5. Alterar status de uma tarefa (Backend) para FEITO
             System.out.println("\n--- Alteração de status para FEITO ---");
             Tarefa tarefaBackend = null;
             for (Tarefa t : tarefasAna) {
@@ -94,83 +86,74 @@ public class MainTeste {
                 }
             }
             if (tarefaBackend != null) {
-                dev1.alterarStatusTarefa(tarefaBackend, StatusTarefa.FEITO);
+                // Precisamos carregar a tarefa completa com o dev responsável (já está ok)
+                devAna.alterarStatusTarefa(tarefaBackend, StatusTarefa.FEITO);
             }
 
-            // 7. Gestor valida tarefa FEITO -> PRONTO
+            // 6. Gestor valida a tarefa (FEITO -> PRONTO)
             System.out.println("\n--- Validação pelo gestor ---");
             if (tarefaBackend != null) {
-                gestor1.validarFinalizacao(tarefaBackend);
+                gestor.validarFinalizacao(tarefaBackend);
             }
 
-            // 8. Testar expiração de prazos (forçar a passagem do tempo)
+            // 7. Verificar expiração de prazos (forçar)
             System.out.println("\n--- Verificação de prazos expirados ---");
             sistema.verificarPrazosExpirados();
 
-            // 9. Gestor reatribui uma tarefa atrasada (ex: tarefa do projeto mobile)
-            List<Tarefa> tarefasAtrasadas = tarefaDAO.listarTodas().stream()
+            // 8. Reatribuir tarefa atrasada (se houver)
+            System.out.println("\n--- Reatribuição de tarefa atrasada ---");
+            List<Tarefa> todasTarefas = tarefaDAO.listarTodas();
+            Tarefa atrasada = todasTarefas.stream()
                     .filter(t -> t.getStatus() == StatusTarefa.ATRASADO)
-                    .toList();
-            if (!tarefasAtrasadas.isEmpty()) {
-                Tarefa atrasada = tarefasAtrasadas.get(0);
-                gestor1.reatribuirTarefaAtrasada(atrasada, dev2);
-                System.out.println("Tarefa atrasada " + atrasada.getId() + " reatribuída para " + dev2.getNome());
+                    .findFirst().orElse(null);
+            if (atrasada != null) {
+                gestor.reatribuirTarefaAtrasada(atrasada, devBruno);
+                System.out.println("Tarefa atrasada " + atrasada.getId() + " reatribuída para " + devBruno.getNome());
+            } else {
+                System.out.println("Nenhuma tarefa atrasada encontrada.");
             }
 
-            // 10. Solicitação de reorganização
+            // 9. Solicitação de reorganização
             System.out.println("\n--- Solicitação de reorganização ---");
-            dev2.solicitarReorganizacao("Preciso de ajuda com tarefas urgentes.");
-            gestor1.listarSolicitacoesPendentes();
-
-            // Processar solicitação
+            devBruno.solicitarReorganizacao("Preciso de ajuda com tarefas urgentes.");
+            gestor.listarSolicitacoesPendentes();
             List<SolicitacaoMudanca> solicitacoes = solicitacaoDAO.listarTodos();
             if (!solicitacoes.isEmpty()) {
-                gestor1.processarSolicitacaoMudanca(solicitacoes.get(0), true);
+                gestor.processarSolicitacaoMudanca(solicitacoes.get(0), true);
             }
 
-            // 11. Envio de relatório final
+            // 10. Envio de relatório final
             System.out.println("\n--- Envio de relatório ---");
             if (tarefaBackend != null) {
-                dev1.enviarRelatorioFinal(tarefaBackend, "Implementação do backend concluída com sucesso.");
+                devAna.enviarRelatorioFinal(tarefaBackend, "Implementação do backend concluída com sucesso.");
             }
 
-            // 12. Gerar relatório diário
+            // 11. Relatório diário
             System.out.println("\n--- Relatório Diário ---");
             sistema.gerarRelatorioDiario();
 
-            // 13. Recarregar dados do banco para verificar persistência
+            // 12. Recarregar dados do banco (verificação de persistência)
             System.out.println("\n--- Recarregando dados do banco (verificação de persistência) ---");
-            List<Usuario> usuarios = usuarioDAO.listarTodos();
-            System.out.println("Total de usuários no banco: " + usuarios.size());
-            List<Projeto> projetos = projetoDAO.listarTodos();
-            System.out.println("Total de projetos: " + projetos.size());
-            List<Tarefa> tarefas = tarefaDAO.listarTodas();
-            System.out.println("Total de tarefas: " + tarefas.size());
-            List<Relatorio> relatorios = relatorioDAO.listarTodos();
-            System.out.println("Total de relatórios: " + relatorios.size());
-            List<SolicitacaoMudanca> sols = solicitacaoDAO.listarTodos();
-            System.out.println("Total de solicitações: " + sols.size());
+            System.out.println("Total de usuários: " + usuarioDAO.listarTodos().size());
+            System.out.println("Total de projetos: " + projetoDAO.listarTodos().size());
+            System.out.println("Total de tarefas: " + tarefaDAO.listarTodas().size());
+            System.out.println("Total de relatórios: " + relatorioDAO.listarTodos().size());
+            System.out.println("Total de solicitações: " + solicitacaoDAO.listarTodos().size());
 
-            // 14. Verificar progresso dos devs
-            System.out.println("\n--- Progresso dos desenvolvedores (após operações) ---");
-            for (UsuarioDev dev : sistema.getDevs()) {
-                double progresso = dev.calcularProgressoTotal();
-                System.out.printf("%s: %.2f%%\n", dev.getNome(), progresso);
-            }
+            // 13. Progresso final dos desenvolvedores
+            System.out.println("\n--- Progresso dos desenvolvedores ---");
+            System.out.printf("%s: %.2f%%\n", devAna.getNome(), devAna.calcularProgressoTotal());
+            System.out.printf("%s: %.2f%%\n", devBruno.getNome(), devBruno.calcularProgressoTotal());
 
-            System.out.println("\n=== TESTE COMPLETO FINALIZADO COM SUCESSO ===");
+            System.out.println("\n=== TESTE CONCLUÍDO COM SUCESSO ===");
 
-        } catch (SQLException e) {
-            System.err.println("ERRO no banco: " + e.getMessage());
-            e.printStackTrace();
         } catch (Exception e) {
-            System.err.println("ERRO inesperado: " + e.getMessage());
+            System.err.println("ERRO: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
     private static void limparBanco() throws SQLException {
-        // Desativa constraints para truncar tabelas na ordem correta
         try (var conn = DatabaseConnection.getConnection();
              var stmt = conn.createStatement()) {
             stmt.execute("SET FOREIGN_KEY_CHECKS = 0");
