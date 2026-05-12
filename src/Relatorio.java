@@ -1,7 +1,6 @@
 import java.util.Date;
 
 public class Relatorio {
-    private static int ultimoId = 0;
     private int id;
     private Date dataEnvio;
     private String conteudo;
@@ -9,13 +8,13 @@ public class Relatorio {
     private Projeto projetoRelacionado;
 
     public Relatorio(String conteudo) {
-        this.id = ++ultimoId;
         this.conteudo = conteudo;
         this.dataEnvio = new Date();
     }
 
     // Getters e Setters
     public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
     public Date getDataEnvio() { return dataEnvio; }
     public void setDataEnvio(Date dataEnvio) { this.dataEnvio = dataEnvio; }
     public String getConteudo() { return conteudo; }
