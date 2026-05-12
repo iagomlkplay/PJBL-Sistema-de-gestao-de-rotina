@@ -6,50 +6,75 @@ import java.util.stream.Collectors;
 
 public class UsuarioGestor extends Usuario {
     private String departamento;
-    private List<UsuarioDev> equipe;
+    private transient UsuarioDAO usuarioDAO;
+    private transient ProjetoDAO projetoDAO;
+    private transient TarefaDAO tarefaDAO;
 
     // Construtor com ID (banco)
     public UsuarioGestor(int id, String nome, String cpf, String email, String senha, String departamento) {
         super(id, nome, cpf, email, senha);
         this.departamento = departamento;
-        this.equipe = new ArrayList<>();
         this.tipoUsuario = TipoUsuario.GESTOR;
+        inicializarDAOs();
     }
 
     // Construtor sem ID (novo cadastro)
     public UsuarioGestor(String nome, String cpf, String email, String senha, String departamento) {
         super(nome, cpf, email, senha);
         this.departamento = departamento;
-        this.equipe = new ArrayList<>();
         this.tipoUsuario = TipoUsuario.GESTOR;
+        inicializarDAOs();
     }
 
-    // Carrega a equipe a partir do banco (chamar após obter o ID)
-    public void carregarEquipe() {
+    private void inicializarDAOs() {
+        usuarioDAO = new UsuarioDAO();
+        projetoDAO = new ProjetoDAO();
+        tarefaDAO = new TarefaDAO();
+    }
+
+    // Carrega a equipe do banco sob demanda
+    private List<UsuarioDev> carregarEquipe() {
         try {
-            UsuarioDAO dao = new UsuarioDAO();
-            equipe = dao.listarDevsPorGestor(this.getId());
+            return usuarioDAO.listarDevsPorGestor(this.getId());
         } catch (SQLException e) {
             System.err.println("Erro ao carregar equipe: " + e.getMessage());
-            e.printStackTrace();
+            return new ArrayList<>();
         }
     }
 
     // RF08: visualizar todos os projetos da equipe e tarefas
     public void visualizarTodosProjetosTarefas() {
+        List<UsuarioDev> equipe = carregarEquipe();
         Sistema sistema = Sistema.getInstance();
         System.out.println("--- Projetos da equipe ---");
         for (Projeto p : sistema.getProjetos()) {
-            boolean temTarefaNaEquipe = p.getTarefas().stream()
-                    .anyMatch(t -> equipe.stream().anyMatch(d -> d.getId() == t.getDevResponsavel().getId()));
+            // Verificar se o projeto tem tarefas atribuídas a algum membro da equipe
+            boolean temTarefaNaEquipe = false;
+            try {
+                List<Tarefa> tarefasProjeto = tarefaDAO.listarPorProjeto(p.getId(), usuarioDAO, projetoDAO);
+                for (Tarefa t : tarefasProjeto) {
+                    int devId = t.getDevResponsavel().getId();
+                    if (equipe.stream().anyMatch(d -> d.getId() == devId)) {
+                        temTarefaNaEquipe = true;
+                        break;
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("Erro ao listar tarefas do projeto: " + e.getMessage());
+            }
             if (temTarefaNaEquipe) {
                 System.out.println(p.getInformacoesDetalhadas());
             }
         }
         System.out.println("--- Tarefas da equipe ---");
         for (UsuarioDev dev : equipe) {
-            for (Tarefa t : dev.getTarefas()) {
-                System.out.println(t.getInformacoesDetalhadas() + " - Responsável: " + dev.getNome());
+            try {
+                List<Tarefa> tarefasDev = tarefaDAO.listarPorDev(dev.getId(), usuarioDAO, projetoDAO);
+                for (Tarefa t : tarefasDev) {
+                    System.out.println(t.getInformacoesDetalhadas() + " - Responsável: " + dev.getNome());
+                }
+            } catch (SQLException e) {
+                System.err.println("Erro ao listar tarefas do dev: " + e.getMessage());
             }
         }
     }
@@ -70,13 +95,13 @@ public class UsuarioGestor extends Usuario {
     public void criarAtribuirTarefa(String descricao, Date prazo, NivelImportancia importancia, int devId, double horasEstimadas) {
         Sistema sistema = Sistema.getInstance();
         UsuarioDev dev = sistema.buscarDevPorId(devId);
+        List<UsuarioDev> equipe = carregarEquipe();
         if (dev == null || equipe.stream().noneMatch(d -> d.getId() == dev.getId())) {
             System.out.println("Dev não encontrado ou não está na sua equipe.");
             return;
         }
         Tarefa tarefa = new Tarefa(descricao, prazo, importancia, dev, horasEstimadas);
         sistema.adicionarTarefa(tarefa);
-        dev.getTarefas().add(tarefa);
         System.out.println("Tarefa criada com " + horasEstimadas + "h estimadas e atribuída ao dev " + dev.getNome());
     }
 
@@ -90,6 +115,7 @@ public class UsuarioGestor extends Usuario {
         Sistema sistema = Sistema.getInstance();
         UsuarioDev dev = sistema.buscarDevPorId(devId);
         Projeto projeto = sistema.buscarProjetoPorId(projetoId);
+        List<UsuarioDev> equipe = carregarEquipe();
         if (dev == null || equipe.stream().noneMatch(d -> d.getId() == dev.getId())) {
             System.out.println("Dev não encontrado ou não está na sua equipe.");
             return;
@@ -98,12 +124,11 @@ public class UsuarioGestor extends Usuario {
             System.out.println("Projeto não encontrado.");
             return;
         }
-        // Gestor pode adicionar tarefa a qualquer projeto
+        // Gestor pode adicionar tarefa a qualquer projeto (não verifica dono do projeto)
         Tarefa tarefa = new Tarefa(descricao, prazo, importancia, dev, horasEstimadas);
         tarefa.setProjetoPai(projeto);
         sistema.adicionarTarefa(tarefa);
-        dev.getTarefas().add(tarefa);
-        projeto.getTarefas().add(tarefa);
+        // Atualiza também a lista de tarefas do projeto (no banco, já foi via inserção)
         System.out.println("Tarefa adicionada ao projeto " + projeto.getNome() + " (ID " + projeto.getId() +
                 ") com " + horasEstimadas + "h estimadas, atribuída ao dev " + dev.getNome());
     }
@@ -120,18 +145,39 @@ public class UsuarioGestor extends Usuario {
         } else {
             System.out.println("Solicitação " + solicitacao.getId() + " REJEITADA.");
         }
+        // Opcional: persistir a alteração da solicitação (se quiser manter histórico)
     }
 
-    // RF11: validar finalização
+    // RF11: validar finalização (sem dependência de listas em memória)
     public void validarFinalizacao(Object item) {
         if (item instanceof Tarefa) {
             Tarefa tarefa = (Tarefa) item;
             if (tarefa.getStatus() == StatusTarefa.FEITO) {
                 tarefa.setStatus(StatusTarefa.PRONTO);
+                // Persistir a mudança no banco
+                try {
+                    tarefaDAO.atualizarStatus(tarefa.getId(), StatusTarefa.PRONTO);
+                } catch (SQLException e) {
+                    System.err.println("Erro ao salvar validação da tarefa: " + e.getMessage());
+                    tarefa.setStatus(StatusTarefa.FEITO);
+                    return;
+                }
                 System.out.println("Tarefa " + tarefa.getId() + " validada como PRONTA.");
+
+                // Verificar projeto pai para atualizar conclusão (recarregar projeto do banco)
                 Projeto projetoPai = tarefa.getProjetoPai();
                 if (projetoPai != null) {
-                    projetoPai.verificarConclusao();
+                    try {
+                        Projeto projetoAtualizado = projetoDAO.buscarPorId(projetoPai.getId());
+                        if (projetoAtualizado != null) {
+                            projetoAtualizado.verificarConclusao(); // método refatorado
+                            if (projetoAtualizado.getStatus() == StatusTarefa.FEITO) {
+                                projetoDAO.atualizarStatus(projetoAtualizado.getId(), StatusTarefa.FEITO);
+                            }
+                        }
+                    } catch (SQLException e) {
+                        System.err.println("Erro ao verificar conclusão do projeto: " + e.getMessage());
+                    }
                 }
             } else {
                 System.out.println("Tarefa " + tarefa.getId() + " não está com status FEITO (atual: " + tarefa.getStatus() + ")");
@@ -140,6 +186,13 @@ public class UsuarioGestor extends Usuario {
             Projeto projeto = (Projeto) item;
             if (projeto.getStatus() == StatusTarefa.FEITO) {
                 projeto.setStatus(StatusTarefa.PRONTO);
+                try {
+                    projetoDAO.atualizarStatus(projeto.getId(), StatusTarefa.PRONTO);
+                } catch (SQLException e) {
+                    System.err.println("Erro ao salvar validação do projeto: " + e.getMessage());
+                    projeto.setStatus(StatusTarefa.FEITO);
+                    return;
+                }
                 System.out.println("Projeto " + projeto.getId() + " validado como PRONTO.");
             } else {
                 System.out.println("Projeto " + projeto.getId() + " não está com status FEITO.");
@@ -153,16 +206,22 @@ public class UsuarioGestor extends Usuario {
             System.out.println("Esta tarefa não está atrasada (status: " + tarefa.getStatus() + ")");
             return;
         }
+        List<UsuarioDev> equipe = carregarEquipe();
         if (equipe.stream().noneMatch(d -> d.getId() == tarefa.getDevResponsavel().getId()) ||
                 equipe.stream().noneMatch(d -> d.getId() == novoDev.getId())) {
             System.out.println("O dev antigo ou o novo dev não pertencem à sua equipe.");
             return;
         }
-        UsuarioDev antigoDev = tarefa.getDevResponsavel();
-        antigoDev.getTarefas().remove(tarefa);
+        // Persistir a reatribuição no banco
+        try {
+            tarefaDAO.reatribuirDev(tarefa.getId(), novoDev.getId());
+        } catch (SQLException e) {
+            System.err.println("Erro ao reatribuir tarefa: " + e.getMessage());
+            return;
+        }
+        // Atualizar o objeto em memória (opcional, para uso imediato)
         tarefa.setDevResponsavel(novoDev);
-        novoDev.getTarefas().add(tarefa);
-        System.out.println("Tarefa atrasada " + tarefa.getId() + " reatribuída de " + antigoDev.getNome() + " para " + novoDev.getNome());
+        System.out.println("Tarefa atrasada " + tarefa.getId() + " reatribuída de " + tarefa.getDevResponsavel().getNome() + " para " + novoDev.getNome());
     }
 
     // Listar solicitações pendentes
@@ -184,6 +243,4 @@ public class UsuarioGestor extends Usuario {
     // Getters e setters
     public String getDepartamento() { return departamento; }
     public void setDepartamento(String departamento) { this.departamento = departamento; }
-    public List<UsuarioDev> getEquipe() { return equipe; }
-    public void setEquipe(List<UsuarioDev> equipe) { this.equipe = equipe; }
 }
