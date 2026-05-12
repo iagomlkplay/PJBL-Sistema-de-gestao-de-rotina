@@ -8,13 +8,11 @@ public class UsuarioDAO {
         String sql = "INSERT INTO usuarios (nome, cpf, email, senha, tipo, departamento, gestor_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
             stmt.setString(1, usuario.getNome());
             stmt.setString(2, usuario.getCpf());
             stmt.setString(3, usuario.getEmail());
             stmt.setString(4, usuario.getSenha());
             stmt.setString(5, usuario.getTipoUsuario().name());
-
             if (usuario instanceof UsuarioGestor) {
                 stmt.setString(6, ((UsuarioGestor) usuario).getDepartamento());
                 stmt.setNull(7, Types.INTEGER);
@@ -22,7 +20,6 @@ public class UsuarioDAO {
                 stmt.setNull(6, Types.VARCHAR);
                 stmt.setInt(7, ((UsuarioDev) usuario).getGestorId());
             }
-
             stmt.executeUpdate();
             ResultSet rs = stmt.getGeneratedKeys();
             if (rs.next()) {
@@ -82,23 +79,6 @@ public class UsuarioDAO {
         }
     }
 
-    private Usuario construirUsuario(ResultSet rs) throws SQLException {
-        int id = rs.getInt("id");
-        String nome = rs.getString("nome");
-        String cpf = rs.getString("cpf");
-        String email = rs.getString("email");
-        String senha = rs.getString("senha");
-        String tipo = rs.getString("tipo");
-        if ("GESTOR".equals(tipo)) {
-            String departamento = rs.getString("departamento");
-            return new UsuarioGestor(id, nome, cpf, email, senha, departamento);
-        } else {
-            int gestorId = rs.getInt("gestor_id");
-            return new UsuarioDev(id, nome, cpf, email, senha, gestorId);
-        }
-    }
-
-    // Listar todos os usuários
     public List<Usuario> listarTodos() throws SQLException {
         List<Usuario> usuarios = new ArrayList<>();
         String sql = "SELECT * FROM usuarios";
@@ -110,5 +90,26 @@ public class UsuarioDAO {
             }
         }
         return usuarios;
+    }
+
+    private Usuario construirUsuario(ResultSet rs) throws SQLException {
+        int id = rs.getInt("id");
+        String nome = rs.getString("nome");
+        String cpf = rs.getString("cpf");
+        String email = rs.getString("email");
+        String senha = rs.getString("senha");
+        String tipo = rs.getString("tipo");
+        if ("GESTOR".equals(tipo)) {
+            String departamento = rs.getString("departamento");
+            UsuarioGestor gestor = new UsuarioGestor(id, nome, cpf, email, senha, departamento);
+            gestor.setTipoUsuario(TipoUsuario.GESTOR);
+            return gestor;
+        } else {
+            int gestorId = rs.getInt("gestor_id");
+            UsuarioDev dev = new UsuarioDev(id, nome, cpf, email, senha);
+            dev.setGestorId(gestorId);
+            dev.setTipoUsuario(TipoUsuario.DEV);
+            return dev;
+        }
     }
 }
