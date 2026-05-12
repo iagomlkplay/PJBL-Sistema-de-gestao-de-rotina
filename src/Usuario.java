@@ -6,8 +6,17 @@ public abstract class Usuario {
     protected String senha;
     protected TipoUsuario tipoUsuario;
 
+    // Construtor com ID (para objetos lidos do banco)
     public Usuario(int id, String nome, String cpf, String email, String senha) {
         this.id = id;
+        this.nome = nome;
+        this.cpf = cpf;
+        this.email = email;
+        this.senha = senha;
+    }
+
+    // Construtor sem ID (para novos cadastros)
+    public Usuario(String nome, String cpf, String email, String senha) {
         this.nome = nome;
         this.cpf = cpf;
         this.email = email;
