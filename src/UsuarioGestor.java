@@ -6,6 +6,7 @@ public class UsuarioGestor extends Usuario {
     private String departamento;
     private List<UsuarioDev> equipe;
 
+    // Construtor com ID (banco)
     public UsuarioGestor(int id, String nome, String cpf, String email, String senha, String departamento) {
         super(id, nome, cpf, email, senha);
         this.departamento = departamento;
@@ -13,7 +14,15 @@ public class UsuarioGestor extends Usuario {
         this.tipoUsuario = TipoUsuario.GESTOR;
     }
 
-    // RF08: visualizar todos os projetos da equipe e tarefas (filtrados pelos devs da equipe)
+    // Construtor sem ID (novo cadastro)
+    public UsuarioGestor(String nome, String cpf, String email, String senha, String departamento) {
+        super(nome, cpf, email, senha);
+        this.departamento = departamento;
+        this.equipe = new java.util.ArrayList<>();
+        this.tipoUsuario = TipoUsuario.GESTOR;
+    }
+
+    // RF08: visualizar todos os projetos da equipe e tarefas
     public void visualizarTodosProjetosTarefas() {
         Sistema sistema = Sistema.getInstance();
         System.out.println("--- Projetos da equipe ---");
@@ -108,7 +117,6 @@ public class UsuarioGestor extends Usuario {
             if (tarefa.getStatus() == StatusTarefa.FEITO) {
                 tarefa.setStatus(StatusTarefa.PRONTO);
                 System.out.println("Tarefa " + tarefa.getId() + " validada como PRONTA.");
-
                 Projeto projetoPai = tarefa.getProjetoPai();
                 if (projetoPai != null) {
                     projetoPai.verificarConclusao();
