@@ -1,7 +1,6 @@
 import java.util.Date;
 
 public class SolicitacaoMudanca {
-    private static int ultimoId = 0;
     private int id;
     private String justificativa;
     private StatusSolicitacao status;
@@ -9,7 +8,6 @@ public class SolicitacaoMudanca {
     private UsuarioDev solicitante;
 
     public SolicitacaoMudanca(String justificativa, UsuarioDev solicitante) {
-        this.id = ++ultimoId;
         this.justificativa = justificativa;
         this.status = StatusSolicitacao.PENDENTE;
         this.dataCriacao = new Date();
@@ -18,6 +16,7 @@ public class SolicitacaoMudanca {
 
     // Getters e Setters
     public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
     public String getJustificativa() { return justificativa; }
     public void setJustificativa(String justificativa) { this.justificativa = justificativa; }
     public StatusSolicitacao getStatus() { return status; }
