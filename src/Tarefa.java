@@ -1,7 +1,6 @@
 import java.util.Date;
 
 public class Tarefa {
-    private static int ultimoId = 0;
     private int id;
     private String descricao;
     private Date prazo;
@@ -12,13 +11,8 @@ public class Tarefa {
     private double horasTrabalhadas;
     private Projeto projetoPai;
 
-    // Construtor sem especificar horas (usa 1.0 como padrão)
-    public Tarefa(String descricao, Date prazo, NivelImportancia nivelImportancia, UsuarioDev devResponsavel) {
-        this(descricao, prazo, nivelImportancia, devResponsavel, 1.0);
-    }
-
+    // Construtor para NOVAS tarefas (sem id, com horas estimadas)
     public Tarefa(String descricao, Date prazo, NivelImportancia nivelImportancia, UsuarioDev devResponsavel, double horasEstimadas) {
-        this.id = ++ultimoId;
         this.descricao = descricao;
         this.prazo = prazo;
         this.nivelImportancia = nivelImportancia;
@@ -26,6 +20,25 @@ public class Tarefa {
         this.devResponsavel = devResponsavel;
         this.horasEstimadas = horasEstimadas;
         this.horasTrabalhadas = 0.0;
+    }
+
+    // Construtor para leitura do banco (com id)
+    public Tarefa(int id, String descricao, Date prazo, NivelImportancia nivelImportancia, StatusTarefa status,
+                  UsuarioDev devResponsavel, double horasEstimadas, double horasTrabalhadas, Projeto projetoPai) {
+        this.id = id;
+        this.descricao = descricao;
+        this.prazo = prazo;
+        this.nivelImportancia = nivelImportancia;
+        this.status = status;
+        this.devResponsavel = devResponsavel;
+        this.horasEstimadas = horasEstimadas;
+        this.horasTrabalhadas = horasTrabalhadas;
+        this.projetoPai = projetoPai;
+    }
+
+    // Construtor sem horas especificadas (mantém compatibilidade)
+    public Tarefa(String descricao, Date prazo, NivelImportancia nivelImportancia, UsuarioDev devResponsavel) {
+        this(descricao, prazo, nivelImportancia, devResponsavel, 1.0);
     }
 
     // Método para calcular progresso
@@ -56,6 +69,7 @@ public class Tarefa {
 
     // Getters e Setters
     public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }
     public Date getPrazo() { return prazo; }
