@@ -84,6 +84,33 @@ public class TarefaDAO {
         return lista;
     }
 
+    // Método listarTodas que retorna lista de todas as tarefas)
+    public List<Tarefa> listarTodas() throws SQLException {
+        List<Tarefa> lista = new ArrayList<>();
+        String sql = "SELECT * FROM tarefas";
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                // Nota: para simplificar, não carregamos os objetos relacionados (dev, projeto) aqui.
+                // Criamos uma tarefa parcial com os dados básicos.
+                Tarefa t = new Tarefa(
+                        rs.getString("descricao"),
+                        rs.getDate("prazo"),
+                        NivelImportancia.valueOf(rs.getString("nivel_importancia")),
+                        null, // devResponsavel será preenchido depois, se necessário
+                        rs.getDouble("horas_estimadas")
+                );
+                t.setId(rs.getInt("id"));
+                t.setStatus(StatusTarefa.valueOf(rs.getString("status")));
+                t.setHorasTrabalhadas(rs.getDouble("horas_trabalhadas"));
+                // projetoPai pode ser obtido depois, se necessário
+                lista.add(t);
+            }
+        }
+        return lista;
+    }
+
     public void atualizarStatus(int id, StatusTarefa novoStatus) throws SQLException {
         String sql = "UPDATE tarefas SET status = ? WHERE id = ?";
         try (Connection conn = getConnection();
