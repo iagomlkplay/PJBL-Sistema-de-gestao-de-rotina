@@ -5,12 +5,22 @@ import java.util.stream.Collectors;
 public class UsuarioDev extends Usuario {
     private List<String> especialidades;
     private List<Tarefa> tarefas;        // tarefas atribuídas (visão local)
+    private int gestorId;                // ID do gestor responsável
 
+    // Construtor com ID (banco)
     public UsuarioDev(int id, String nome, String cpf, String email, String senha) {
         super(id, nome, cpf, email, senha);
         this.especialidades = new ArrayList<>();
         this.tarefas = new ArrayList<>();
-        this.tipoUsuario = TipoUsuario.DESENVOLVEDOR;
+        this.tipoUsuario = TipoUsuario.DEV;
+    }
+
+    // Construtor sem ID (novo cadastro)
+    public UsuarioDev(String nome, String cpf, String email, String senha) {
+        super(nome, cpf, email, senha);
+        this.especialidades = new ArrayList<>();
+        this.tarefas = new ArrayList<>();
+        this.tipoUsuario = TipoUsuario.DEV;
     }
 
     // RF04: visualizar seus itens (tarefas e projetos em que participa)
@@ -136,4 +146,6 @@ public class UsuarioDev extends Usuario {
     public void setEspecialidades(List<String> especialidades) { this.especialidades = especialidades; }
     public List<Tarefa> getTarefas() { return tarefas; }
     public void setTarefas(List<Tarefa> tarefas) { this.tarefas = tarefas; }
+    public int getGestorId() { return gestorId; }
+    public void setGestorId(int gestorId) { this.gestorId = gestorId; }
 }
