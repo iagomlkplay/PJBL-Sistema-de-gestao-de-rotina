@@ -37,6 +37,9 @@ public class MainTeste {
             sistema.realizarCadastro(dev2);
             System.out.println("Dev cadastrado: " + dev2.getNome() + " (ID " + dev2.getId() + ")");
 
+            // CORREÇÃO: carregar equipe do gestor (busca os devs do banco e preenche a lista)
+            gestor1.carregarEquipe();
+
             // 3. Criar projetos
             System.out.println("\n--- Criação de projetos ---");
             Date prazoCurto = addDias(5);
@@ -77,6 +80,8 @@ public class MainTeste {
             for (Tarefa t : tarefasAna) {
                 t.adicionarHorasTrabalhadas(3.0);
                 System.out.println("   " + t.getDescricao() + " - horas: " + t.getHorasTrabalhadas());
+                // Adiciona a tarefa à lista do dev (sincroniza o objeto em memória)
+                dev1.getTarefas().add(t);
             }
 
             // 6. Marcar algumas tarefas como FEITO
@@ -94,7 +99,9 @@ public class MainTeste {
 
             // 7. Gestor valida tarefa FEITO -> PRONTO
             System.out.println("\n--- Validação pelo gestor ---");
-            gestor1.validarFinalizacao(tarefaBackend);
+            if (tarefaBackend != null) {
+                gestor1.validarFinalizacao(tarefaBackend);
+            }
 
             // 8. Testar expiração de prazos (forçar a passagem do tempo)
             System.out.println("\n--- Verificação de prazos expirados ---");
@@ -123,7 +130,9 @@ public class MainTeste {
 
             // 11. Envio de relatório final
             System.out.println("\n--- Envio de relatório ---");
-            dev1.enviarRelatorioFinal(tarefaBackend, "Implementação do backend concluída com sucesso.");
+            if (tarefaBackend != null) {
+                dev1.enviarRelatorioFinal(tarefaBackend, "Implementação do backend concluída com sucesso.");
+            }
 
             // 12. Gerar relatório diário
             System.out.println("\n--- Relatório Diário ---");
