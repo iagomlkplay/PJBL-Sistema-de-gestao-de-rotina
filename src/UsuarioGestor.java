@@ -41,7 +41,7 @@ public class UsuarioGestor extends Usuario {
         System.out.println("--- Projetos da equipe ---");
         for (Projeto p : sistema.getProjetos()) {
             boolean temTarefaNaEquipe = p.getTarefas().stream()
-                    .anyMatch(t -> equipe.contains(t.getDevResponsavel()));
+                    .anyMatch(t -> equipe.stream().anyMatch(d -> d.getId() == t.getDevResponsavel().getId()));
             if (temTarefaNaEquipe) {
                 System.out.println(p.getInformacoesDetalhadas());
             }
@@ -70,7 +70,7 @@ public class UsuarioGestor extends Usuario {
     public void criarAtribuirTarefa(String descricao, Date prazo, NivelImportancia importancia, int devId, double horasEstimadas) {
         Sistema sistema = Sistema.getInstance();
         UsuarioDev dev = sistema.buscarDevPorId(devId);
-        if (dev == null || !equipe.contains(dev)) {
+        if (dev == null || equipe.stream().noneMatch(d -> d.getId() == dev.getId())) {
             System.out.println("Dev não encontrado ou não está na sua equipe.");
             return;
         }
@@ -90,7 +90,7 @@ public class UsuarioGestor extends Usuario {
         Sistema sistema = Sistema.getInstance();
         UsuarioDev dev = sistema.buscarDevPorId(devId);
         Projeto projeto = sistema.buscarProjetoPorId(projetoId);
-        if (dev == null || !equipe.contains(dev)) {
+        if (dev == null || equipe.stream().noneMatch(d -> d.getId() == dev.getId())) {
             System.out.println("Dev não encontrado ou não está na sua equipe.");
             return;
         }
@@ -153,7 +153,8 @@ public class UsuarioGestor extends Usuario {
             System.out.println("Esta tarefa não está atrasada (status: " + tarefa.getStatus() + ")");
             return;
         }
-        if (!equipe.contains(tarefa.getDevResponsavel()) || !equipe.contains(novoDev)) {
+        if (equipe.stream().noneMatch(d -> d.getId() == tarefa.getDevResponsavel().getId()) ||
+                equipe.stream().noneMatch(d -> d.getId() == novoDev.getId())) {
             System.out.println("O dev antigo ou o novo dev não pertencem à sua equipe.");
             return;
         }
@@ -167,7 +168,9 @@ public class UsuarioGestor extends Usuario {
     // Listar solicitações pendentes
     public void listarSolicitacoesPendentes() {
         Sistema sistema = Sistema.getInstance();
-        List<SolicitacaoMudanca> pendentes = sistema.getSolicitacoes().stream().filter(s -> s.getStatus() == StatusSolicitacao.PENDENTE).collect(Collectors.toList());
+        List<SolicitacaoMudanca> pendentes = sistema.getSolicitacoes().stream()
+                .filter(s -> s.getStatus() == StatusSolicitacao.PENDENTE)
+                .collect(Collectors.toList());
         if (pendentes.isEmpty()) {
             System.out.println("Não há solicitações pendentes.");
         } else {
