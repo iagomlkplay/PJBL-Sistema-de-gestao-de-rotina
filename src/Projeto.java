@@ -3,7 +3,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Projeto {
-    private static int ultimoId = 0;
     private int id;
     private String nome;
     private Date prazo;
@@ -11,12 +10,22 @@ public class Projeto {
     private StatusTarefa status;
     private List<Tarefa> tarefas;
 
+    // Construtor para NOVOS projetos (sem id, sem lista de tarefas)
     public Projeto(String nome, Date prazo, NivelImportancia importancia) {
-        this.id = ++ultimoId;
         this.nome = nome;
         this.prazo = prazo;
         this.importancia = importancia;
         this.status = StatusTarefa.PENDENTE;
+        this.tarefas = new ArrayList<>();
+    }
+
+    // Construtor para leitura do banco (com id e status)
+    public Projeto(int id, String nome, Date prazo, NivelImportancia importancia, StatusTarefa status) {
+        this.id = id;
+        this.nome = nome;
+        this.prazo = prazo;
+        this.importancia = importancia;
+        this.status = status;
         this.tarefas = new ArrayList<>();
     }
 
@@ -69,6 +78,7 @@ public class Projeto {
 
     // Getters e Setters
     public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
     public Date getPrazo() { return prazo; }
