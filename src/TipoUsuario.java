@@ -1,4 +1,4 @@
 public enum TipoUsuario {
-    DESENVOLVEDOR,
+    DEV,
     GESTOR
 }
