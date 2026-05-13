@@ -172,6 +172,27 @@ public class TarefaDAO {
         }
     }
 
+    public void atualizarTarefa(Tarefa tarefa) throws SQLException {
+        String sql = "UPDATE tarefas SET descricao = ?, prazo = ?, nivel_importancia = ?, status = ?, horas_estimadas = ?, horas_trabalhadas = ?, dev_responsavel_id = ?, projeto_id = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, tarefa.getDescricao());
+            stmt.setDate(2, new java.sql.Date(tarefa.getPrazo().getTime()));
+            stmt.setString(3, tarefa.getNivelImportancia().name());
+            stmt.setString(4, tarefa.getStatus().name());
+            stmt.setDouble(5, tarefa.getHorasEstimadas());
+            stmt.setDouble(6, tarefa.getHorasTrabalhadas());
+            stmt.setInt(7, tarefa.getDevResponsavel().getId());
+            if (tarefa.getProjetoPai() != null) {
+                stmt.setInt(8, tarefa.getProjetoPai().getId());
+            } else {
+                stmt.setNull(8, Types.INTEGER);
+            }
+            stmt.setInt(9, tarefa.getId());
+            stmt.executeUpdate();
+        }
+    }
+
     public void deletar(int id) throws SQLException {
         String sql = "DELETE FROM tarefas WHERE id = ?";
         try (Connection conn = getConnection();
