@@ -1,4 +1,6 @@
 import java.util.*;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Sistema {
     private static Sistema instance;
@@ -7,6 +9,7 @@ public class Sistema {
     private TarefaDAO tarefaDAO;
     private RelatorioDAO relatorioDAO;
     private SolicitacaoDAO solicitacaoDAO;
+    private Timer verificadorTimer;
 
     private Sistema() {
         usuarioDAO = new UsuarioDAO();
@@ -272,6 +275,28 @@ public class Sistema {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    // Método para iniciar verificação de prazos
+    public void iniciarVerificadorPrazos(long intervaloMilissegundos) {
+        if (verificadorTimer != null) {
+            verificadorTimer.cancel();
+        }
+        verificadorTimer = new Timer(true); // daemon thread
+        verificadorTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                verificarPrazosExpirados();
+            }
+        }, 0, intervaloMilissegundos);
+    }
+
+    // Método para parar verificação de prazos
+    public void pararVerificadorPrazos() {
+        if (verificadorTimer != null) {
+            verificadorTimer.cancel();
+            verificadorTimer = null;
         }
     }
 }
