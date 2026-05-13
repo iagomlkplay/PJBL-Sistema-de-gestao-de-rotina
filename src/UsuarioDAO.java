@@ -126,6 +126,40 @@ public class UsuarioDAO {
         return null;
     }
 
+    public Usuario buscarPorCpf(String cpf) throws SQLException {
+        String sql = "SELECT * FROM usuarios WHERE cpf = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, cpf);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return construirUsuario(rs);
+            }
+        }
+        return null;
+    }
+
+    public void atualizarUsuario(Usuario usuario) throws SQLException {
+        String sql = "UPDATE usuarios SET nome = ?, cpf = ?, email = ?, senha = ?, tipo = ?, departamento = ?, gestor_id = ? WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, usuario.getNome());
+            stmt.setString(2, usuario.getCpf());
+            stmt.setString(3, usuario.getEmail());
+            stmt.setString(4, usuario.getSenha());
+            stmt.setString(5, usuario.getTipoUsuario().name());
+            if (usuario instanceof UsuarioGestor) {
+                stmt.setString(6, ((UsuarioGestor) usuario).getDepartamento());
+                stmt.setNull(7, Types.INTEGER);
+            } else {
+                stmt.setNull(6, Types.VARCHAR);
+                stmt.setInt(7, ((UsuarioDev) usuario).getGestorId());
+            }
+            stmt.setInt(8, usuario.getId());
+            stmt.executeUpdate();
+        }
+    }
+
     public void deletar(int id) throws SQLException {
         String sql = "DELETE FROM usuarios WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
