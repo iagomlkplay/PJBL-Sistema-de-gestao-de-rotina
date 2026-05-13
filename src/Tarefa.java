@@ -1,4 +1,5 @@
 import java.util.Date;
+import java.sql.SQLException;
 
 public class Tarefa {
     private int id;
@@ -60,6 +61,14 @@ public class Tarefa {
         }
         this.horasTrabalhadas += horas;
         System.out.println("Tarefa " + id + " agora tem " + horasTrabalhadas + "h trabalhadas de " + horasEstimadas + "h estimadas.");
+        // Persistir a alteração no banco
+        try {
+            TarefaDAO dao = new TarefaDAO();
+            dao.adicionarHorasTrabalhadas(this.id, horas);
+        } catch (SQLException e) {
+            System.err.println("Erro ao salvar horas trabalhadas: " + e.getMessage());
+            this.horasTrabalhadas -= horas; // reverte a alteração em memória
+        }
     }
 
     public String getInformacoesDetalhadas() {
