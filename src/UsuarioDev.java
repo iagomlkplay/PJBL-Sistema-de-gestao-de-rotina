@@ -33,7 +33,7 @@ public class UsuarioDev extends Usuario {
     }
 
     // Busca as tarefas do dev diretamente do banco
-    private List<Tarefa> carregarTarefas() {
+    public List<Tarefa> carregarTarefas() {
         try {
             return tarefaDAO.listarPorDev(this.getId(), usuarioDAO, projetoDAO);
         } catch (SQLException e) {
@@ -43,54 +43,70 @@ public class UsuarioDev extends Usuario {
     }
 
     // RF04: visualizar seus itens (tarefas e projetos em que participa)
-    public void visualizarPropriosProjetosTarefas() {
+    public String visualizarPropriosProjetosTarefas() {
+        StringBuilder sb = new StringBuilder();
         List<Tarefa> minhasTarefas = carregarTarefas();
-        // Agrupar tarefas por projeto
         List<Projeto> projetosParticipados = minhasTarefas.stream()
                 .map(Tarefa::getProjetoPai)
                 .filter(p -> p != null)
                 .distinct()
                 .collect(Collectors.toList());
 
-        System.out.println("--- Projetos em que participo ---");
+        sb.append("--- Projetos em que participo ---\n");
         for (Projeto p : projetosParticipados) {
-            System.out.println(p.getInformacoesDetalhadas() + " - Progresso: " + p.calcularProgresso() + "%");
+            // Carregar tarefas do projeto para calcular progresso real
+            try {
+                List<Tarefa> tarefasProj = tarefaDAO.listarPorProjeto(p.getId(), usuarioDAO, projetoDAO);
+                sb.append(p.getInformacoesDetalhadas(tarefasProj)).append("\n");
+            } catch (SQLException e) {
+                sb.append(p.getInformacoesDetalhadas()).append(" (erro ao carregar tarefas)\n");
+            }
         }
-        System.out.println("--- Minhas Tarefas ---");
+        sb.append("--- Minhas Tarefas ---\n");
         for (Tarefa t : minhasTarefas) {
-            System.out.println(t.getInformacoesDetalhadas() + " - Progresso: " + t.calcularProgresso() + "%");
+            sb.append(t.getInformacoesDetalhadas()).append("\n");
         }
+        return sb.toString();
     }
 
     // RF04 (parte de colegas) - mostra todos os devs e seu progresso (baseado em tarefas)
-    public void visualizarProgressoEquipe() {
+    public String visualizarProgressoEquipe() {
+        StringBuilder sb = new StringBuilder();
         Sistema sistema = Sistema.getInstance();
-        System.out.println("--- Progresso de todos os Desenvolvedores ---");
+        sb.append("--- Progresso de todos os Desenvolvedores ---\n");
         for (UsuarioDev dev : sistema.getDevs()) {
-            // O progresso de cada dev precisa ser calculado com base nas suas tarefas do banco
             double progresso = dev.calcularProgressoTotal();
-            System.out.println(dev.getNome() + " (ID " + dev.getId() + ") - Progresso geral: " + progresso + "%");
+            sb.append(dev.getNome()).append(" (ID ").append(dev.getId()).append(") - Progresso geral: ")
+                    .append(String.format("%.1f", progresso)).append("%\n");
         }
+        return sb.toString();
     }
 
     // RF04 - visualizar detalhes de um colega específico (suas tarefas e projetos)
-    public void visualizarDetalhesColega(UsuarioDev colega) {
-        System.out.println("=== Detalhes de " + colega.getNome() + " ===");
+    public String visualizarDetalhesColega(UsuarioDev colega) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== Detalhes de ").append(colega.getNome()).append(" ===\n");
         List<Tarefa> tarefasColega = colega.carregarTarefas();
-        // Projetos do colega (derivados das tarefas)
         List<Projeto> projetosColega = tarefasColega.stream()
                 .map(Tarefa::getProjetoPai)
                 .filter(p -> p != null)
                 .distinct()
                 .collect(Collectors.toList());
-        System.out.println("--- Projetos ---");
+        sb.append("--- Projetos ---\n");
         for (Projeto p : projetosColega) {
-            System.out.println(p.getInformacoesDetalhadas());
+            // Carregar tarefas do projeto para exibir completo
+            try {
+                List<Tarefa> tarefasProj = tarefaDAO.listarPorProjeto(p.getId(), usuarioDAO, projetoDAO);
+                sb.append(p.getInformacoesDetalhadas(tarefasProj)).append("\n");
+            } catch (SQLException e) {
+                sb.append(p.getInformacoesDetalhadas()).append(" (erro ao carregar tarefas)\n");
+            }
         }
-        System.out.println("--- Tarefas ---");
+        sb.append("--- Tarefas ---\n");
         for (Tarefa t : tarefasColega) {
-            System.out.println(t.getInformacoesDetalhadas());
+            sb.append(t.getInformacoesDetalhadas()).append("\n");
         }
+        return sb.toString();
     }
 
     // RF05: alterar status de tarefa
@@ -115,6 +131,14 @@ public class UsuarioDev extends Usuario {
             System.out.println("Não é possível alterar status de tarefa já validada (PRONTO).");
             return;
         }
+
+        // RF05: desenvolvedor só pode mudar de PENDENTE ou ATRASADO para FEITO
+        if (!(tarefa.getStatus() == StatusTarefa.PENDENTE || tarefa.getStatus() == StatusTarefa.ATRASADO)
+                || novoStatus != StatusTarefa.FEITO) {
+            System.out.println("Desenvolvedor só pode alterar status de PENDENTE/ATRASADO para FEITO.");
+            return;
+        }
+
         StatusTarefa antigo = tarefa.getStatus();
         tarefa.setStatus(novoStatus);
 
@@ -125,24 +149,6 @@ public class UsuarioDev extends Usuario {
             System.err.println("Erro ao salvar status da tarefa no banco: " + e.getMessage());
             tarefa.setStatus(antigo);
             return;
-        }
-
-        // Verificar projeto pai para atualizar conclusão
-        Projeto projetoPai = tarefa.getProjetoPai();
-        if (projetoPai != null) {
-            // Para garantir, recarregamos o projeto do banco
-            try {
-                Projeto projetoAtualizado = projetoDAO.buscarPorId(projetoPai.getId());
-                if (projetoAtualizado != null) {
-                    projetoAtualizado.verificarConclusao(); // Este método agora não depende de lista interna
-                    // Persistir possível mudança de status do projeto
-                    if (projetoAtualizado.getStatus() == StatusTarefa.FEITO) {
-                        projetoDAO.atualizarStatus(projetoAtualizado.getId(), StatusTarefa.FEITO);
-                    }
-                }
-            } catch (SQLException e) {
-                System.err.println("Erro ao verificar conclusão do projeto: " + e.getMessage());
-            }
         }
 
         System.out.println("Status da tarefa " + tarefa.getId() + " alterado de " + antigo + " para " + novoStatus);
