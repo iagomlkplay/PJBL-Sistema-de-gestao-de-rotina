@@ -43,4 +43,13 @@ public class RelatorioDAO {
         }
         return lista;
     }
+
+    public void deletar(int id) throws SQLException {
+        String sql = "DELETE FROM relatorios WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
+        }
+    }
 }
