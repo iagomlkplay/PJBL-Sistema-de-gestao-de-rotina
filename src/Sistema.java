@@ -1,6 +1,8 @@
 import java.util.*;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.sql.SQLException;
+import java.util.stream.Collectors;
 
 public class Sistema {
     private static Sistema instance;
@@ -31,6 +33,10 @@ public class Sistema {
             if (usuarioDAO.buscarPorEmail(usuario.getEmail()) != null) {
                 return false;
             }
+            // Verifica se CPF já existe
+            if (usuarioDAO.buscarPorCpf(usuario.getCpf()) != null) {
+                return false;
+            }
             usuarioDAO.inserir(usuario);
             return true;
         } catch (Exception e) {
@@ -48,7 +54,7 @@ public class Sistema {
         }
     }
 
-    // === Métodos de adição (delegam para DAOs) ===
+    // === Métodos de adição ===
     public void adicionarProjeto(Projeto p) {
         try {
             projetoDAO.inserir(p);
@@ -101,7 +107,6 @@ public class Sistema {
         }
     }
 
-    // Localiza o gestor responsável por um dev (baseado na coluna gestor_id)
     public UsuarioGestor buscarGestorPorDev(UsuarioDev dev) {
         try {
             int gestorId = dev.getGestorId();
@@ -114,7 +119,7 @@ public class Sistema {
         }
     }
 
-    // === Listagens (consultas ao banco) ===
+    // === Listagens ===
     public List<Usuario> getUsuarios() {
         try {
             return usuarioDAO.listarTodos();
@@ -161,7 +166,6 @@ public class Sistema {
 
     public List<Tarefa> getTarefas() {
         try {
-            // Retorna todas as tarefas (com dados básicos)
             return tarefaDAO.listarTodas();
         } catch (Exception e) {
             e.printStackTrace();
@@ -187,6 +191,47 @@ public class Sistema {
         }
     }
 
+    // === Solicitações por gestor ===
+    public List<SolicitacaoMudanca> getSolicitacoesPorGestor(int gestorId) {
+        try {
+            return solicitacaoDAO.listarPorGestor(gestorId);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    // === Tarefas e projetos por equipe ===
+    public List<Tarefa> getTarefasDaEquipe(int gestorId) {
+        try {
+            List<UsuarioDev> equipe = usuarioDAO.listarDevsPorGestor(gestorId);
+            Set<Integer> devIds = equipe.stream().map(UsuarioDev::getId).collect(Collectors.toSet());
+            return tarefaDAO.listarTodas().stream()
+                    .filter(t -> devIds.contains(t.getDevResponsavel().getId()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Projeto> getProjetosDaEquipe(int gestorId) {
+        try {
+            List<Tarefa> tarefasEquipe = getTarefasDaEquipe(gestorId);
+            Set<Integer> projetoIds = tarefasEquipe.stream()
+                    .map(Tarefa::getProjetoPai)
+                    .filter(Objects::nonNull)
+                    .map(Projeto::getId)
+                    .collect(Collectors.toSet());
+            return getProjetos().stream()
+                    .filter(p -> projetoIds.contains(p.getId()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
     // === Notificações ===
     public void notificarGestorMudancaStatus(Tarefa tarefa, UsuarioDev dev) {
         UsuarioGestor gestor = buscarGestorPorDev(dev);
@@ -201,14 +246,14 @@ public class Sistema {
     private void verificarItensFeitoEAtrasados(UsuarioGestor gestor) {
         if (gestor == null) return;
         try {
-            List<Tarefa> todasTarefas = getTarefas();
-            long feitos = todasTarefas.stream().filter(t -> t.getStatus() == StatusTarefa.FEITO).count();
+            List<Tarefa> tarefasEquipe = getTarefasDaEquipe(gestor.getId());
+            long feitos = tarefasEquipe.stream().filter(t -> t.getStatus() == StatusTarefa.FEITO).count();
             if (feitos > 0) {
-                System.out.println(">>> NOTIFICAÇÃO: Existem " + feitos + " tarefas com status FEITO.");
+                System.out.println(">>> NOTIFICAÇÃO: Existem " + feitos + " tarefas com status FEITO na sua equipe.");
             }
-            long atrasados = todasTarefas.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
+            long atrasados = tarefasEquipe.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
             if (atrasados > 0) {
-                System.out.println(">>> ALERTA: Existem " + atrasados + " tarefas com status ATRASADO.");
+                System.out.println(">>> ALERTA: Existem " + atrasados + " tarefas com status ATRASADO na sua equipe.");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -226,9 +271,11 @@ public class Sistema {
                     t.setStatus(StatusTarefa.ATRASADO);
                     tarefaDAO.atualizarStatus(t.getId(), StatusTarefa.ATRASADO);
                     System.out.println("Tarefa " + t.getId() + " expirou e foi marcada como ATRASADA.");
+                    // Notifica o gestor
                     UsuarioGestor gestor = buscarGestorPorDev(t.getDevResponsavel());
                     if (gestor != null) {
                         System.out.println(">>> ALERTA: Tarefa atrasada notificada ao gestor " + gestor.getNome());
+                        verificarItensFeitoEAtrasados(gestor);
                     }
                 }
             }
@@ -278,12 +325,12 @@ public class Sistema {
         }
     }
 
-    // Método para iniciar verificação de prazos
+    // Timer
     public void iniciarVerificadorPrazos(long intervaloMilissegundos) {
         if (verificadorTimer != null) {
             verificadorTimer.cancel();
         }
-        verificadorTimer = new Timer(true); // daemon thread
+        verificadorTimer = new Timer(true);
         verificadorTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
@@ -292,7 +339,6 @@ public class Sistema {
         }, 0, intervaloMilissegundos);
     }
 
-    // Método para parar verificação de prazos
     public void pararVerificadorPrazos() {
         if (verificadorTimer != null) {
             verificadorTimer.cancel();
