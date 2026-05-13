@@ -117,17 +117,25 @@ public class TarefaDAO {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
+            UsuarioDAO usuarioDAO = new UsuarioDAO();
+            ProjetoDAO projetoDAO = new ProjetoDAO();
             while (rs.next()) {
+                int devId = rs.getInt("dev_responsavel_id");
+                UsuarioDev dev = (UsuarioDev) usuarioDAO.buscarPorId(devId);
+                int projId = rs.getInt("projeto_id");
+                Projeto projeto = (projId != 0) ? projetoDAO.buscarPorId(projId) : null;
+
                 Tarefa t = new Tarefa(
+                        rs.getInt("id"),
                         rs.getString("descricao"),
                         rs.getDate("prazo"),
                         NivelImportancia.valueOf(rs.getString("nivel_importancia")),
-                        null,
-                        rs.getDouble("horas_estimadas")
+                        StatusTarefa.valueOf(rs.getString("status")),
+                        dev,
+                        rs.getDouble("horas_estimadas"),
+                        rs.getDouble("horas_trabalhadas"),
+                        projeto
                 );
-                t.setId(rs.getInt("id"));
-                t.setStatus(StatusTarefa.valueOf(rs.getString("status")));
-                t.setHorasTrabalhadas(rs.getDouble("horas_trabalhadas"));
                 lista.add(t);
             }
         }
@@ -160,6 +168,15 @@ public class TarefaDAO {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, novoDevId);
             stmt.setInt(2, tarefaId);
+            stmt.executeUpdate();
+        }
+    }
+
+    public void deletar(int id) throws SQLException {
+        String sql = "DELETE FROM tarefas WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
             stmt.executeUpdate();
         }
     }
