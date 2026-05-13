@@ -43,12 +43,12 @@ public class UsuarioGestor extends Usuario {
     }
 
     // RF08: visualizar todos os projetos da equipe e tarefas
-    public void visualizarTodosProjetosTarefas() {
+    public String visualizarTodosProjetosTarefas() {
+        StringBuilder sb = new StringBuilder();
         List<UsuarioDev> equipe = carregarEquipe();
         Sistema sistema = Sistema.getInstance();
-        System.out.println("--- Projetos da equipe ---");
+        sb.append("--- Projetos da equipe ---\n");
         for (Projeto p : sistema.getProjetos()) {
-            // Verificar se o projeto tem tarefas atribuídas a algum membro da equipe
             boolean temTarefaNaEquipe = false;
             try {
                 List<Tarefa> tarefasProjeto = tarefaDAO.listarPorProjeto(p.getId(), usuarioDAO, projetoDAO);
@@ -59,24 +59,25 @@ public class UsuarioGestor extends Usuario {
                         break;
                     }
                 }
+                if (temTarefaNaEquipe) {
+                    sb.append(p.getInformacoesDetalhadas(tarefasProjeto)).append("\n");
+                }
             } catch (SQLException e) {
-                System.err.println("Erro ao listar tarefas do projeto: " + e.getMessage());
-            }
-            if (temTarefaNaEquipe) {
-                System.out.println(p.getInformacoesDetalhadas());
+                sb.append(p.getInformacoesDetalhadas()).append(" (erro ao carregar tarefas)\n");
             }
         }
-        System.out.println("--- Tarefas da equipe ---");
+        sb.append("--- Tarefas da equipe ---\n");
         for (UsuarioDev dev : equipe) {
             try {
                 List<Tarefa> tarefasDev = tarefaDAO.listarPorDev(dev.getId(), usuarioDAO, projetoDAO);
                 for (Tarefa t : tarefasDev) {
-                    System.out.println(t.getInformacoesDetalhadas() + " - Responsável: " + dev.getNome());
+                    sb.append(t.getInformacoesDetalhadas()).append(" - Responsável: ").append(dev.getNome()).append("\n");
                 }
             } catch (SQLException e) {
-                System.err.println("Erro ao listar tarefas do dev: " + e.getMessage());
+                sb.append("Erro ao listar tarefas do dev ").append(dev.getNome()).append("\n");
             }
         }
+        return sb.toString();
     }
 
     // RF09: criar projeto
@@ -140,12 +141,21 @@ public class UsuarioGestor extends Usuario {
             return;
         }
         solicitacao.setStatus(aprovado ? StatusSolicitacao.APROVADA : StatusSolicitacao.REJEITADA);
+        // Persistir a alteração no banco
+        try {
+            SolicitacaoDAO dao = new SolicitacaoDAO();
+            dao.atualizarStatus(solicitacao.getId(), solicitacao.getStatus());
+        } catch (SQLException e) {
+            System.err.println("Erro ao salvar status da solicitação: " + e.getMessage());
+            // Reverte o estado em memória
+            solicitacao.setStatus(StatusSolicitacao.PENDENTE);
+            return;
+        }
         if (aprovado) {
             System.out.println("Solicitação " + solicitacao.getId() + " APROVADA. Reorganização será feita manualmente pelo gestor.");
         } else {
             System.out.println("Solicitação " + solicitacao.getId() + " REJEITADA.");
         }
-        // Opcional: persistir a alteração da solicitação (se quiser manter histórico)
     }
 
     // RF11: validar finalização (sem dependência de listas em memória)
@@ -154,30 +164,20 @@ public class UsuarioGestor extends Usuario {
             Tarefa tarefa = (Tarefa) item;
             if (tarefa.getStatus() == StatusTarefa.FEITO) {
                 tarefa.setStatus(StatusTarefa.PRONTO);
-                // Persistir a mudança no banco
                 try {
                     tarefaDAO.atualizarStatus(tarefa.getId(), StatusTarefa.PRONTO);
+                    System.out.println("Tarefa " + tarefa.getId() + " validada como PRONTA.");
+
+                    // Verificar se o projeto pai deve ser concluído
+                    Projeto projetoPai = tarefa.getProjetoPai();
+                    if (projetoPai != null) {
+                        // Recarregar todas as tarefas do projeto para verificar conclusão
+                        List<Tarefa> tarefasDoProjeto = tarefaDAO.listarPorProjeto(projetoPai.getId(), usuarioDAO, projetoDAO);
+                        projetoPai.verificarConclusao(tarefasDoProjeto, tarefaDAO, projetoDAO);
+                    }
                 } catch (SQLException e) {
                     System.err.println("Erro ao salvar validação da tarefa: " + e.getMessage());
                     tarefa.setStatus(StatusTarefa.FEITO);
-                    return;
-                }
-                System.out.println("Tarefa " + tarefa.getId() + " validada como PRONTA.");
-
-                // Verificar projeto pai para atualizar conclusão (recarregar projeto do banco)
-                Projeto projetoPai = tarefa.getProjetoPai();
-                if (projetoPai != null) {
-                    try {
-                        Projeto projetoAtualizado = projetoDAO.buscarPorId(projetoPai.getId());
-                        if (projetoAtualizado != null) {
-                            projetoAtualizado.verificarConclusao(); // método refatorado
-                            if (projetoAtualizado.getStatus() == StatusTarefa.FEITO) {
-                                projetoDAO.atualizarStatus(projetoAtualizado.getId(), StatusTarefa.FEITO);
-                            }
-                        }
-                    } catch (SQLException e) {
-                        System.err.println("Erro ao verificar conclusão do projeto: " + e.getMessage());
-                    }
                 }
             } else {
                 System.out.println("Tarefa " + tarefa.getId() + " não está com status FEITO (atual: " + tarefa.getStatus() + ")");
@@ -188,12 +188,11 @@ public class UsuarioGestor extends Usuario {
                 projeto.setStatus(StatusTarefa.PRONTO);
                 try {
                     projetoDAO.atualizarStatus(projeto.getId(), StatusTarefa.PRONTO);
+                    System.out.println("Projeto " + projeto.getId() + " validado como PRONTO.");
                 } catch (SQLException e) {
                     System.err.println("Erro ao salvar validação do projeto: " + e.getMessage());
                     projeto.setStatus(StatusTarefa.FEITO);
-                    return;
                 }
-                System.out.println("Projeto " + projeto.getId() + " validado como PRONTO.");
             } else {
                 System.out.println("Projeto " + projeto.getId() + " não está com status FEITO.");
             }
