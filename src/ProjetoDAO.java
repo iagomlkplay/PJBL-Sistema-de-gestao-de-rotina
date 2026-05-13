@@ -52,6 +52,19 @@ public class ProjetoDAO {
         }
     }
 
+    public void atualizarProjeto(Projeto projeto) throws SQLException {
+        String sql = "UPDATE projetos SET nome = ?, prazo = ?, importancia = ?, status = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, projeto.getNome());
+            stmt.setDate(2, new java.sql.Date(projeto.getPrazo().getTime()));
+            stmt.setString(3, projeto.getImportancia().name());
+            stmt.setString(4, projeto.getStatus().name());
+            stmt.setInt(5, projeto.getId());
+            stmt.executeUpdate();
+        }
+    }
+
     public List<Projeto> listarTodos() throws SQLException {
         List<Projeto> lista = new ArrayList<>();
         String sql = "SELECT * FROM projetos";
