@@ -39,6 +39,29 @@ public class SolicitacaoDAO {
         return lista;
     }
 
+    public List<SolicitacaoMudanca> listarPorGestor(int gestorId) throws SQLException {
+        List<SolicitacaoMudanca> lista = new ArrayList<>();
+        String sql = "SELECT s.* FROM solicitacoes s " +
+                "JOIN usuarios u ON s.dev_solicitante_id = u.id " +
+                "WHERE u.gestor_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, gestorId);
+            ResultSet rs = stmt.executeQuery();
+            UsuarioDAO usuarioDAO = new UsuarioDAO();
+            while (rs.next()) {
+                int solicitanteId = rs.getInt("dev_solicitante_id");
+                UsuarioDev solicitante = (UsuarioDev) usuarioDAO.buscarPorId(solicitanteId);
+                SolicitacaoMudanca s = new SolicitacaoMudanca(rs.getString("justificativa"), solicitante);
+                s.setId(rs.getInt("id"));
+                s.setStatus(StatusSolicitacao.valueOf(rs.getString("status")));
+                s.setDataCriacao(rs.getTimestamp("data_criacao"));
+                lista.add(s);
+            }
+        }
+        return lista;
+    }
+
     public void deletar(int id) throws SQLException {
         String sql = "DELETE FROM solicitacoes WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
