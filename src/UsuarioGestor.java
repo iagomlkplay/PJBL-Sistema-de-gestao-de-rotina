@@ -211,6 +211,10 @@ public class UsuarioGestor extends Usuario {
             System.out.println("O dev antigo ou o novo dev não pertencem à sua equipe.");
             return;
         }
+
+        // Captura o nome do desenvolvedor antigo ANTES de alterar
+        String nomeAntigo = tarefa.getDevResponsavel().getNome();
+
         // Persistir a reatribuição no banco
         try {
             tarefaDAO.reatribuirDev(tarefa.getId(), novoDev.getId());
@@ -218,9 +222,9 @@ public class UsuarioGestor extends Usuario {
             System.err.println("Erro ao reatribuir tarefa: " + e.getMessage());
             return;
         }
-        // Atualizar o objeto em memória (opcional, para uso imediato)
+        // Atualizar o objeto em memória
         tarefa.setDevResponsavel(novoDev);
-        System.out.println("Tarefa atrasada " + tarefa.getId() + " reatribuída de " + tarefa.getDevResponsavel().getNome() + " para " + novoDev.getNome());
+        System.out.println("Tarefa atrasada " + tarefa.getId() + " reatribuída de " + nomeAntigo + " para " + novoDev.getNome());
     }
 
     // Listar solicitações pendentes
