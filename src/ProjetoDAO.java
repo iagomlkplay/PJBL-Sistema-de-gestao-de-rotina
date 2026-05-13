@@ -70,4 +70,13 @@ public class ProjetoDAO {
         }
         return lista;
     }
+
+    public void deletar(int id) throws SQLException {
+        String sql = "DELETE FROM projetos WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
+        }
+    }
 }
