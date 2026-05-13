@@ -1,5 +1,4 @@
 import java.util.Date;
-import java.util.ArrayList;
 import java.util.List;
 
 public class Projeto {
@@ -26,19 +25,7 @@ public class Projeto {
         this.status = status;
     }
 
-    // O progresso depende de uma consulta ao banco
-    public double calcularProgresso() {
-        // Aqui precisaríamos consultar o banco para saber as tarefas do projeto.
-        // Como não temos acesso ao DAO nesta classe, o melhor é que este método seja usado apenas em contextos onde as tarefas já estão carregadas ou que a consulta seja feita externamente.
-        // Por simplicidade, manteremos a lógica que depende da lista, mas agora a lista deve ser passada por parâmetro ou este método deve ser substituído.
-        // Vamos alterar a abordagem: o progresso não será calculado diretamente pelo Projeto, mas por um serviço externo.
-        // Para compatibilidade, se a lista de tarefas não for fornecida, retornamos 0 (mas isso é frágil).
-        // O ideal é remover este método e criar uma classe utilitária.
-        System.out.println("Aviso: calcularProgresso() sem lista de tarefas retornará 0%. Use TarefaDAO para obter o progresso real.");
-        return 0.0;
-    }
-
-    // Alternativa: receber a lista de tarefas como parâmetro
+    // Recebe a lista de tarefas do projeto para calcular o progresso
     public double calcularProgresso(List<Tarefa> tarefasDoProjeto) {
         if (tarefasDoProjeto == null || tarefasDoProjeto.isEmpty()) {
             return (status == StatusTarefa.PRONTO || status == StatusTarefa.FEITO) ? 100.0 : 0.0;
@@ -63,9 +50,8 @@ public class Projeto {
         return total;
     }
 
+    // Versão simplificada - não exibe progresso nem horas
     public String getInformacoesDetalhadas() {
-        // Para não quebrar a exibição, retornamos sem as horas (pois não temos a lista)
-        // Em uso real, quem chamar este método deve também buscar as tarefas e calcular as horas.
         return String.format("Projeto [ID=%d, Nome=%s, Prazo=%s, Importância=%s, Status=%s]",
                 id, nome, prazo, importancia, status);
     }
@@ -77,9 +63,27 @@ public class Projeto {
                 tarefasDoProjeto.size(), getTotalHorasTrabalhadas(tarefasDoProjeto), getTotalHorasEstimadas(tarefasDoProjeto));
     }
 
-    public void verificarConclusao() {
-        // Este método também depende de ter a lista de tarefas. Para evitar complexidade, mova a lógica para um serviço.
-        System.out.println("Aviso: verificarConclusao() não deve ser usado diretamente. Use um serviço que consulte as tarefas do projeto no banco.");
+    // Verifica se todas as tarefas estão PRONTO e atualiza o status do projeto para FEITO
+    // Requer acesso ao DAO para persistir a mudança
+    public void verificarConclusao(List<Tarefa> tarefasDoProjeto, TarefaDAO tarefaDAO, ProjetoDAO projetoDAO) {
+        if (this.status == StatusTarefa.PRONTO || this.status == StatusTarefa.FEITO) return;
+        boolean todasPronto = true;
+        for (Tarefa t : tarefasDoProjeto) {
+            if (t.getStatus() != StatusTarefa.PRONTO) {
+                todasPronto = false;
+                break;
+            }
+        }
+        if (todasPronto && !tarefasDoProjeto.isEmpty()) {
+            this.status = StatusTarefa.FEITO;
+            try {
+                projetoDAO.atualizarStatus(this.id, StatusTarefa.FEITO);
+                System.out.println("Projeto " + this.id + " concluído (todas tarefas PRONTO) - status alterado para FEITO.");
+            } catch (Exception e) {
+                System.err.println("Erro ao atualizar status do projeto: " + e.getMessage());
+                this.status = StatusTarefa.PENDENTE; // rollback
+            }
+        }
     }
 
     // Getters e Setters (sem lista de tarefas)
