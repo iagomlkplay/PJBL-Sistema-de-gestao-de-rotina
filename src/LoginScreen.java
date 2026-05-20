@@ -1,5 +1,4 @@
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -26,7 +25,7 @@ public class LoginScreen extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
 
-        // Email
+        // E-mail
         gbc.gridx = 0; gbc.gridy = 0;
         panel.add(new JLabel("E-mail:"), gbc);
         gbc.gridx = 1;
@@ -58,7 +57,7 @@ public class LoginScreen extends JFrame {
 
         add(panel, BorderLayout.CENTER);
 
-        // Ações
+        // Ações dos botões
         btnEntrar.addActionListener(e -> realizarLogin());
         btnCadastrar.addActionListener(e -> abrirCadastro());
         txtSenha.addActionListener(e -> realizarLogin());
@@ -89,13 +88,13 @@ public class LoginScreen extends JFrame {
             lblMensagem.setText("Tipo de usuário desconhecido.");
             return;
         }
-        dispose(); // fecha login
+        dispose(); // fecha a tela de login
     }
 
     private void abrirCadastro() {
         // Diálogo modal para cadastro
         JDialog dialog = new JDialog(this, "Novo Cadastro", true);
-        dialog.setSize(400, 450);
+        dialog.setSize(450, 500);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
 
@@ -123,41 +122,41 @@ public class LoginScreen extends JFrame {
 
         int row = 0;
         gbc.gridx = 0; gbc.gridy = row;
-        form.add(new JLabel("Nome:"), gbc);
+        form.add(new JLabel("Nome:*"), gbc);
         gbc.gridx = 1;
         form.add(txtNome, gbc);
 
         row++;
         gbc.gridx = 0; gbc.gridy = row;
-        form.add(new JLabel("CPF (000.000.000-00):"), gbc);
+        form.add(new JLabel("CPF (000.000.000-00):*"), gbc);
         gbc.gridx = 1;
         form.add(txtCpf, gbc);
 
         row++;
         gbc.gridx = 0; gbc.gridy = row;
-        form.add(new JLabel("E-mail:"), gbc);
+        form.add(new JLabel("E-mail:*"), gbc);
         gbc.gridx = 1;
         form.add(txtEmail, gbc);
 
         row++;
         gbc.gridx = 0; gbc.gridy = row;
-        form.add(new JLabel("Senha:"), gbc);
+        form.add(new JLabel("Senha:*"), gbc);
         gbc.gridx = 1;
         form.add(txtSenha, gbc);
 
         row++;
         gbc.gridx = 0; gbc.gridy = row;
-        form.add(new JLabel("Confirmar senha:"), gbc);
+        form.add(new JLabel("Confirmar senha:*"), gbc);
         gbc.gridx = 1;
         form.add(txtConfirma, gbc);
 
         row++;
         gbc.gridx = 0; gbc.gridy = row;
-        form.add(new JLabel("Tipo:"), gbc);
+        form.add(new JLabel("Tipo:*"), gbc);
         gbc.gridx = 1;
         form.add(cbTipo, gbc);
 
-        // Campos condicionais (inicialmente invisíveis)
+        // Painel condicional (aparece conforme o tipo)
         JPanel condPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbcCond = new GridBagConstraints();
         gbcCond.insets = new Insets(5,5,5,5);
@@ -172,14 +171,14 @@ public class LoginScreen extends JFrame {
 
         JPanel gestorPanel = new JPanel(new BorderLayout());
         gestorPanel.add(condPanel, BorderLayout.NORTH);
-        gestorPanel.setVisible(false); // inicialmente visível apenas para GESTOR? Vamos controlar
+        gestorPanel.setVisible(false); // inicialmente invisível (pois tipo padrão é DESENVOLVEDOR)
 
         row++;
         gbc.gridx = 0; gbc.gridy = row;
         gbc.gridwidth = 2;
         form.add(gestorPanel, gbc);
 
-        // Controle de visibilidade
+        // Controle de visibilidade do painel condicional
         cbTipo.addActionListener(e -> {
             String tipo = (String) cbTipo.getSelectedItem();
             gestorPanel.setVisible("GESTOR".equals(tipo));
@@ -206,8 +205,9 @@ public class LoginScreen extends JFrame {
             String confirma = new String(txtConfirma.getPassword());
             String tipo = (String) cbTipo.getSelectedItem();
 
+            // Validações
             if (nome.isEmpty() || cpf.isEmpty() || email.isEmpty() || senha.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Preencha todos os campos.");
+                JOptionPane.showMessageDialog(dialog, "Preencha todos os campos obrigatórios (*).");
                 return;
             }
             if (!senha.equals(confirma)) {
@@ -240,7 +240,7 @@ public class LoginScreen extends JFrame {
 
             if (ok) {
                 dialog.dispose();
-                // Opcional: limpar campos do login e focar no e-mail
+                // Pré-preenche o campo e-mail na tela de login
                 txtEmail.setText(email);
                 txtSenha.setText("");
                 lblMensagem.setText("Cadastro realizado! Faça login.");
@@ -250,9 +250,5 @@ public class LoginScreen extends JFrame {
         });
 
         dialog.setVisible(true);
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new LoginScreen().setVisible(true));
     }
 }
