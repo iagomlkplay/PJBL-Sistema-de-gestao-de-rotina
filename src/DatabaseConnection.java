@@ -9,5 +9,13 @@ public class DatabaseConnection {
 
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL, USER, PASSWORD);
+
+        // Tentar usar o try catch
+
+        //try {
+        //    return DriverManager.getConnection(URL, USER, PASSWORD);
+        //} catch (SQLException e) {
+        //    throw new RuntimeException(e);
+
     }
 }
