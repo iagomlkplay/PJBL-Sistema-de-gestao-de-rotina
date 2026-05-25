@@ -1,8 +1,7 @@
 import javax.swing.*;
+import javax.swing.text.MaskFormatter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.Date;
+import java.text.ParseException;
 
 public class LoginScreen extends JFrame {
     private JTextField txtEmail;
@@ -57,7 +56,6 @@ public class LoginScreen extends JFrame {
 
         add(panel, BorderLayout.CENTER);
 
-        // Ações dos botões
         btnEntrar.addActionListener(e -> realizarLogin());
         btnCadastrar.addActionListener(e -> abrirCadastro());
         txtSenha.addActionListener(e -> realizarLogin());
@@ -79,7 +77,6 @@ public class LoginScreen extends JFrame {
             return;
         }
 
-        // Abre o dashboard apropriado
         if (usuario instanceof UsuarioDev) {
             new Dashboard((UsuarioDev) usuario).setVisible(true);
         } else if (usuario instanceof UsuarioGestor) {
@@ -88,11 +85,24 @@ public class LoginScreen extends JFrame {
             lblMensagem.setText("Tipo de usuário desconhecido.");
             return;
         }
-        dispose(); // fecha a tela de login
+        dispose();
+    }
+
+    private JFormattedTextField criarCampoCpf() {
+        try {
+            MaskFormatter maskCpf = new MaskFormatter("###.###.###-##");
+            maskCpf.setPlaceholderCharacter('_');
+            JFormattedTextField campo = new JFormattedTextField(maskCpf);
+            campo.setColumns(15);
+            return campo;
+        } catch (ParseException ex) {
+            JFormattedTextField campo = new JFormattedTextField();
+            campo.setColumns(15);
+            return campo;
+        }
     }
 
     private void abrirCadastro() {
-        // Diálogo modal para cadastro
         JDialog dialog = new JDialog(this, "Novo Cadastro", true);
         dialog.setSize(450, 500);
         dialog.setLocationRelativeTo(this);
@@ -105,7 +115,7 @@ public class LoginScreen extends JFrame {
 
         // Campos comuns
         JTextField txtNome = new JTextField(15);
-        JTextField txtCpf = new JTextField(15);
+        JFormattedTextField txtCpf = criarCampoCpf();
         JTextField txtEmail = new JTextField(15);
         JPasswordField txtSenha = new JPasswordField(15);
         JPasswordField txtConfirma = new JPasswordField(15);
@@ -115,7 +125,7 @@ public class LoginScreen extends JFrame {
         JTextField txtDepartamento = new JTextField(15);
         JComboBox<UsuarioGestor> cbGestor = new JComboBox<>();
 
-        // Carregar gestores existentes
+        // Carregar gestores existentes (para o combo de desenvolvedor)
         for (UsuarioGestor g : Sistema.getInstance().getGestores()) {
             cbGestor.addItem(g);
         }
@@ -156,36 +166,42 @@ public class LoginScreen extends JFrame {
         gbc.gridx = 1;
         form.add(cbTipo, gbc);
 
-        // Painel condicional (aparece conforme o tipo)
-        JPanel condPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbcCond = new GridBagConstraints();
-        gbcCond.insets = new Insets(5,5,5,5);
-        gbcCond.gridx = 0; gbcCond.gridy = 0;
-        condPanel.add(new JLabel("Departamento:"), gbcCond);
-        gbcCond.gridx = 1;
-        condPanel.add(txtDepartamento, gbcCond);
-        gbcCond.gridx = 0; gbcCond.gridy = 1;
-        condPanel.add(new JLabel("Gestor responsável:"), gbcCond);
-        gbcCond.gridx = 1;
-        condPanel.add(cbGestor, gbcCond);
+        // ========== Painel condicional corrigido ==========
+        JPanel panelGestor = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        panelGestor.add(new JLabel("Departamento:"));
+        panelGestor.add(txtDepartamento);
+        txtDepartamento.setColumns(15);
 
-        JPanel gestorPanel = new JPanel(new BorderLayout());
-        gestorPanel.add(condPanel, BorderLayout.NORTH);
-        gestorPanel.setVisible(false); // inicialmente invisível (pois tipo padrão é DESENVOLVEDOR)
+        JPanel panelDev = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        panelDev.add(new JLabel("Gestor responsável:"));
+        panelDev.add(cbGestor);
+        cbGestor.setPreferredSize(new Dimension(150, 25));
+
+        JPanel condPanel = new JPanel(new CardLayout());
+        condPanel.add(panelGestor, "GESTOR");
+        condPanel.add(panelDev, "DESENVOLVEDOR");
+        condPanel.setVisible(true); // Torna visível desde o início
+
+        // Define o card inicial baseado no tipo padrão (DESENVOLVEDOR)
+        String tipoInicial = (String) cbTipo.getSelectedItem();
+        CardLayout cl = (CardLayout) condPanel.getLayout();
+        cl.show(condPanel, tipoInicial);
 
         row++;
         gbc.gridx = 0; gbc.gridy = row;
         gbc.gridwidth = 2;
-        form.add(gestorPanel, gbc);
+        form.add(condPanel, gbc);
 
-        // Controle de visibilidade do painel condicional
+        // Listener para trocar o card quando o tipo mudar
         cbTipo.addActionListener(e -> {
             String tipo = (String) cbTipo.getSelectedItem();
-            gestorPanel.setVisible("GESTOR".equals(tipo));
+            CardLayout cl2 = (CardLayout) condPanel.getLayout();
+            cl2.show(condPanel, tipo);
             dialog.pack();
         });
 
-        // Botões
+        // ================================================
+
         JPanel botoes = new JPanel();
         JButton btnSalvar = new JButton("Salvar");
         JButton btnCancelar = new JButton("Cancelar");
@@ -199,15 +215,18 @@ public class LoginScreen extends JFrame {
 
         btnSalvar.addActionListener(e -> {
             String nome = txtNome.getText().trim();
-            String cpf = txtCpf.getText().trim();
+            String cpf = txtCpf.getText().trim().replaceAll("\\D", "");
             String email = txtEmail.getText().trim();
             String senha = new String(txtSenha.getPassword());
             String confirma = new String(txtConfirma.getPassword());
             String tipo = (String) cbTipo.getSelectedItem();
 
-            // Validações
             if (nome.isEmpty() || cpf.isEmpty() || email.isEmpty() || senha.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "Preencha todos os campos obrigatórios (*).");
+                return;
+            }
+            if (cpf.length() != 11) {
+                JOptionPane.showMessageDialog(dialog, "CPF inválido. Use o formato 000.000.000-00.");
                 return;
             }
             if (!senha.equals(confirma)) {
@@ -240,7 +259,6 @@ public class LoginScreen extends JFrame {
 
             if (ok) {
                 dialog.dispose();
-                // Pré-preenche o campo e-mail na tela de login
                 txtEmail.setText(email);
                 txtSenha.setText("");
                 lblMensagem.setText("Cadastro realizado! Faça login.");
