@@ -1,17 +1,20 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
-/**
- * Dashboard principal com abas para cada funcionalidade.
- * Suporta tanto Desenvolvedor quanto Gestor.
- */
+interface Refreshable {
+    void refresh();
+}
+
 public class Dashboard extends JFrame {
     private Usuario usuarioLogado;
     private Sistema sistema = Sistema.getInstance();
     private JTabbedPane tabbedPane;
+    private List<Refreshable> refreshablePanels = new ArrayList<>();
 
-    // Construtores
     public Dashboard(UsuarioDev dev) {
         this((Usuario) dev);
     }
@@ -26,32 +29,53 @@ public class Dashboard extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 800);
         setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH); // tela cheia
 
         tabbedPane = new JTabbedPane();
 
         if (user instanceof UsuarioDev) {
             UsuarioDev dev = (UsuarioDev) user;
-            tabbedPane.addTab("Minhas Tarefas", new MinhasTarefasPanel(dev));
-            tabbedPane.addTab("Progresso da Equipe", new ProgressoEquipePanel(dev));
-            tabbedPane.addTab("Detalhes de Colega", new DetalhesColegaPanel(dev));
-            tabbedPane.addTab("Enviar Relatório", new EnviarRelatorioPanel(dev));
-            tabbedPane.addTab("Solicitar Reorganização", new SolicitarReorganizacaoPanel(dev));
+            MinhasTarefasPanel p1 = new MinhasTarefasPanel(dev);
+            ProgressoEquipePanel p2 = new ProgressoEquipePanel(dev);
+            DetalhesColegaPanel p3 = new DetalhesColegaPanel(dev);
+            EnviarRelatorioPanel p4 = new EnviarRelatorioPanel(dev);
+            SolicitarReorganizacaoPanel p5 = new SolicitarReorganizacaoPanel(dev);
+            refreshablePanels.add(p1);
+            refreshablePanels.add(p2);
+            refreshablePanels.add(p3);
+            refreshablePanels.add(p4);
+            refreshablePanels.add(p5);
+            tabbedPane.addTab("Minhas Tarefas", p1);
+            tabbedPane.addTab("Progresso da Equipe", p2);
+            tabbedPane.addTab("Detalhes de Colega", p3);
+            tabbedPane.addTab("Enviar Relatório", p4);
+            tabbedPane.addTab("Solicitar Reorganização", p5);
         } else {
             UsuarioGestor gestor = (UsuarioGestor) user;
-            tabbedPane.addTab("Visão Geral", new VisaoGeralPanel(gestor));
-            tabbedPane.addTab("Criar Projeto/Tarefa", new CriarProjetoTarefaPanel(gestor));
-            tabbedPane.addTab("Validar Finalizações", new ValidarFinalizacoesPanel(gestor));
-            tabbedPane.addTab("Solicitações Pendentes", new SolicitacoesPanel(gestor));
-            tabbedPane.addTab("Reatribuir Atrasadas", new ReatribuirAtrasadasPanel(gestor));
-            tabbedPane.addTab("Relatório Diário", new RelatorioDiarioPanel(gestor));
+            VisaoGeralPanel p1 = new VisaoGeralPanel(gestor);
+            CriarProjetoTarefaPanel p2 = new CriarProjetoTarefaPanel(gestor);
+            ValidarFinalizacoesPanel p3 = new ValidarFinalizacoesPanel(gestor);
+            SolicitacoesPanel p4 = new SolicitacoesPanel(gestor);
+            ReatribuirAtrasadasPanel p5 = new ReatribuirAtrasadasPanel(gestor);
+            RelatorioDiarioPanel p6 = new RelatorioDiarioPanel(gestor);
+            refreshablePanels.add(p1);
+            refreshablePanels.add(p2);
+            refreshablePanels.add(p3);
+            refreshablePanels.add(p4);
+            refreshablePanels.add(p5);
+            refreshablePanels.add(p6);
+            tabbedPane.addTab("Visão Geral", p1);
+            tabbedPane.addTab("Criar Projeto/Tarefa", p2);
+            tabbedPane.addTab("Validar Finalizações", p3);
+            tabbedPane.addTab("Solicitações Pendentes", p4);
+            tabbedPane.addTab("Reatribuir Atrasadas", p5);
+            tabbedPane.addTab("Relatório Diário", p6);
         }
 
         add(tabbedPane, BorderLayout.CENTER);
 
-        // Inicia verificação automática de prazos (a cada 1 minuto)
         sistema.iniciarVerificadorPrazos(60000);
 
-        // Para o timer ao fechar a janela
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
@@ -60,11 +84,34 @@ public class Dashboard extends JFrame {
         });
     }
 
-    // ======================== CLASSES INTERNAS (PAINÉIS) ========================
+    public void refreshAll() {
+        for (Refreshable rp : refreshablePanels) {
+            rp.refresh();
+        }
+    }
 
-    // ---------- Painéis para Desenvolvedor ----------
+    // ======================== RENDERIZADOR DE BARRA DE PROGRESSO ========================
+    private class ProgressBarRenderer extends JProgressBar implements TableCellRenderer {
+        public ProgressBarRenderer() {
+            setStringPainted(true);
+        }
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            if (value instanceof Integer) {
+                int progress = (Integer) value;
+                setValue(progress);
+                setString(progress + "%");
+            } else {
+                setValue(0);
+                setString("");
+            }
+            return this;
+        }
+    }
 
-    private class MinhasTarefasPanel extends JPanel {
+    // ======================== PAINÉIS PARA DESENVOLVEDOR ========================
+
+    private class MinhasTarefasPanel extends JPanel implements Refreshable {
         private UsuarioDev dev;
         private JTable table;
         private DefaultTableModel model;
@@ -74,6 +121,7 @@ public class Dashboard extends JFrame {
             setLayout(new BorderLayout());
             model = new DefaultTableModel(new String[]{"ID", "Descrição", "Prazo", "Status", "Progresso", "Horas (Trab/Esim)"}, 0);
             table = new JTable(model);
+            table.setDefaultRenderer(Integer.class, new ProgressBarRenderer());
             add(new JScrollPane(table), BorderLayout.CENTER);
 
             JPanel botoes = new JPanel();
@@ -85,22 +133,23 @@ public class Dashboard extends JFrame {
             botoes.add(btnRefresh);
             add(botoes, BorderLayout.SOUTH);
 
-            carregarTarefas();
-
+            refresh();
             btnAddHoras.addActionListener(e -> adicionarHoras());
             btnConcluir.addActionListener(e -> concluirTarefa());
-            btnRefresh.addActionListener(e -> carregarTarefas());
+            btnRefresh.addActionListener(e -> refresh());
         }
 
-        private void carregarTarefas() {
+        @Override
+        public void refresh() {
             model.setRowCount(0);
             for (Tarefa t : dev.carregarTarefas()) {
+                int progresso = (int) Math.round(t.calcularProgresso());
                 model.addRow(new Object[]{
                         t.getId(),
                         t.getDescricao(),
                         t.getPrazo(),
                         t.getStatus(),
-                        String.format("%.1f%%", t.calcularProgresso()),
+                        progresso,
                         String.format("%.1f / %.1f", t.getHorasTrabalhadas(), t.getHorasEstimadas())
                 });
             }
@@ -119,7 +168,7 @@ public class Dashboard extends JFrame {
             try {
                 double horas = Double.parseDouble(horasStr);
                 tarefa.adicionarHorasTrabalhadas(horas);
-                carregarTarefas();
+                ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Número inválido.");
             }
@@ -135,14 +184,13 @@ public class Dashboard extends JFrame {
             Tarefa tarefa = dev.carregarTarefas().stream().filter(t -> t.getId() == id).findFirst().orElse(null);
             if (tarefa == null) return;
             dev.alterarStatusTarefa(tarefa, StatusTarefa.FEITO);
-            carregarTarefas();
+            ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
         }
     }
 
-    private class ProgressoEquipePanel extends JPanel {
+    private class ProgressoEquipePanel extends JPanel implements Refreshable {
         private UsuarioDev dev;
         private JTextArea textArea;
-
         public ProgressoEquipePanel(UsuarioDev dev) {
             this.dev = dev;
             setLayout(new BorderLayout());
@@ -152,20 +200,19 @@ public class Dashboard extends JFrame {
             add(new JScrollPane(textArea), BorderLayout.CENTER);
             JButton btnRefresh = new JButton("Atualizar");
             add(btnRefresh, BorderLayout.SOUTH);
-            btnRefresh.addActionListener(e -> carregarProgresso());
-            carregarProgresso();
+            btnRefresh.addActionListener(e -> refresh());
+            refresh();
         }
-
-        private void carregarProgresso() {
+        @Override
+        public void refresh() {
             textArea.setText(dev.visualizarProgressoEquipe());
         }
     }
 
-    private class DetalhesColegaPanel extends JPanel {
+    private class DetalhesColegaPanel extends JPanel implements Refreshable {
         private UsuarioDev dev;
         private JComboBox<UsuarioDev> cbColegas;
         private JTextArea textArea;
-
         public DetalhesColegaPanel(UsuarioDev dev) {
             this.dev = dev;
             setLayout(new BorderLayout());
@@ -179,12 +226,11 @@ public class Dashboard extends JFrame {
             textArea = new JTextArea();
             textArea.setEditable(false);
             add(new JScrollPane(textArea), BorderLayout.CENTER);
-
-            carregarColegas();
+            refresh();
             btnCarregar.addActionListener(e -> exibirDetalhes());
         }
-
-        private void carregarColegas() {
+        @Override
+        public void refresh() {
             cbColegas.removeAllItems();
             for (UsuarioDev d : Sistema.getInstance().getDevs()) {
                 if (d.getId() != dev.getId()) {
@@ -192,7 +238,6 @@ public class Dashboard extends JFrame {
                 }
             }
         }
-
         private void exibirDetalhes() {
             UsuarioDev colega = (UsuarioDev) cbColegas.getSelectedItem();
             if (colega != null) {
@@ -201,12 +246,11 @@ public class Dashboard extends JFrame {
         }
     }
 
-    private class EnviarRelatorioPanel extends JPanel {
+    private class EnviarRelatorioPanel extends JPanel implements Refreshable {
         private UsuarioDev dev;
         private JComboBox<String> tipoItem;
         private JComboBox<Object> itemCombo;
         private JTextArea txtConteudo;
-
         public EnviarRelatorioPanel(UsuarioDev dev) {
             this.dev = dev;
             setLayout(new BorderLayout(10,10));
@@ -220,18 +264,18 @@ public class Dashboard extends JFrame {
             top.add(new JLabel("Conteúdo:"));
             top.add(new JLabel());
             add(top, BorderLayout.NORTH);
-
             txtConteudo = new JTextArea(10,40);
             add(new JScrollPane(txtConteudo), BorderLayout.CENTER);
-
             JButton btnEnviar = new JButton("Enviar Relatório");
             add(btnEnviar, BorderLayout.SOUTH);
-
             tipoItem.addActionListener(e -> atualizarItens());
             atualizarItens();
             btnEnviar.addActionListener(e -> enviar());
         }
-
+        @Override
+        public void refresh() {
+            atualizarItens();
+        }
         private void atualizarItens() {
             itemCombo.removeAllItems();
             String tipo = (String) tipoItem.getSelectedItem();
@@ -240,7 +284,6 @@ public class Dashboard extends JFrame {
                     itemCombo.addItem(t);
                 }
             } else {
-                // Projetos que o dev participa
                 dev.carregarTarefas().stream()
                         .map(Tarefa::getProjetoPai)
                         .filter(p -> p != null)
@@ -248,7 +291,6 @@ public class Dashboard extends JFrame {
                         .forEach(itemCombo::addItem);
             }
         }
-
         private void enviar() {
             Object item = itemCombo.getSelectedItem();
             String conteudo = txtConteudo.getText().trim();
@@ -259,13 +301,13 @@ public class Dashboard extends JFrame {
             dev.enviarRelatorioFinal(item, conteudo);
             JOptionPane.showMessageDialog(this, "Relatório enviado com sucesso!");
             txtConteudo.setText("");
+            ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
         }
     }
 
-    private class SolicitarReorganizacaoPanel extends JPanel {
+    private class SolicitarReorganizacaoPanel extends JPanel implements Refreshable {
         private UsuarioDev dev;
         private JTextArea txtJustificativa;
-
         public SolicitarReorganizacaoPanel(UsuarioDev dev) {
             this.dev = dev;
             setLayout(new BorderLayout());
@@ -276,7 +318,8 @@ public class Dashboard extends JFrame {
             add(btnSolicitar, BorderLayout.SOUTH);
             btnSolicitar.addActionListener(e -> solicitar());
         }
-
+        @Override
+        public void refresh() {}
         private void solicitar() {
             String justif = txtJustificativa.getText().trim();
             if (justif.isEmpty()) {
@@ -286,15 +329,15 @@ public class Dashboard extends JFrame {
             dev.solicitarReorganizacao(justif);
             JOptionPane.showMessageDialog(this, "Solicitação enviada ao gestor.");
             txtJustificativa.setText("");
+            ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
         }
     }
 
-    // ---------- Painéis para Gestor ----------
+    // ======================== PAINÉIS PARA GESTOR ========================
 
-    private class VisaoGeralPanel extends JPanel {
+    private class VisaoGeralPanel extends JPanel implements Refreshable {
         private UsuarioGestor gestor;
         private JTextArea textArea;
-
         public VisaoGeralPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
@@ -303,21 +346,20 @@ public class Dashboard extends JFrame {
             add(new JScrollPane(textArea), BorderLayout.CENTER);
             JButton btnRefresh = new JButton("Atualizar");
             add(btnRefresh, BorderLayout.SOUTH);
-            btnRefresh.addActionListener(e -> carregarVisao());
-            carregarVisao();
+            btnRefresh.addActionListener(e -> refresh());
+            refresh();
         }
-
-        private void carregarVisao() {
+        @Override
+        public void refresh() {
             textArea.setText(gestor.visualizarTodosProjetosTarefas());
         }
     }
 
-    private class CriarProjetoTarefaPanel extends JPanel {
+    private class CriarProjetoTarefaPanel extends JPanel implements Refreshable {
         private UsuarioGestor gestor;
         private JComboBox<String> tipoCriacao;
         private JPanel cardPanel;
         private CardLayout cardLayout;
-
         public CriarProjetoTarefaPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
@@ -331,12 +373,21 @@ public class Dashboard extends JFrame {
             add(cardPanel, BorderLayout.CENTER);
             tipoCriacao.addActionListener(e -> cardLayout.show(cardPanel, (String) tipoCriacao.getSelectedItem()));
         }
+        @Override
+        public void refresh() {
+            // Atualiza os combos nos painéis filhos
+            Component[] comps = cardPanel.getComponents();
+            for (Component c : comps) {
+                if (c instanceof Refreshable) {
+                    ((Refreshable) c).refresh();
+                }
+            }
+        }
 
-        private class CriarProjetoPanel extends JPanel {
+        private class CriarProjetoPanel extends JPanel implements Refreshable {
             private JTextField txtNome;
             private JSpinner spPrazo;
             private JComboBox<NivelImportancia> cbImportancia;
-
             CriarProjetoPanel() {
                 setLayout(new GridLayout(0,2,5,5));
                 add(new JLabel("Nome:"));
@@ -352,7 +403,7 @@ public class Dashboard extends JFrame {
                 add(btnCriar);
                 btnCriar.addActionListener(e -> criarProjeto());
             }
-
+            @Override public void refresh() {}
             private void criarProjeto() {
                 String nome = txtNome.getText().trim();
                 if (nome.isEmpty()) {
@@ -368,16 +419,16 @@ public class Dashboard extends JFrame {
                 JOptionPane.showMessageDialog(this, "Projeto criado com sucesso!");
                 txtNome.setText("");
                 spPrazo.setValue(10);
+                ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
             }
         }
 
-        private class CriarTarefaAvulsaPanel extends JPanel {
+        private class CriarTarefaAvulsaPanel extends JPanel implements Refreshable {
             private JComboBox<UsuarioDev> cbDev;
             private JTextField txtDesc;
             private JSpinner spPrazo;
             private JComboBox<NivelImportancia> cbImportancia;
             private JSpinner spHoras;
-
             CriarTarefaAvulsaPanel() {
                 setLayout(new GridLayout(0,2,5,5));
                 add(new JLabel("Desenvolvedor:"));
@@ -397,17 +448,16 @@ public class Dashboard extends JFrame {
                 add(spHoras);
                 JButton btnCriar = new JButton("Criar Tarefa");
                 add(btnCriar);
-                carregarDevs();
+                refresh();
                 btnCriar.addActionListener(e -> criarTarefa());
             }
-
-            private void carregarDevs() {
+            @Override
+            public void refresh() {
                 cbDev.removeAllItems();
                 for (UsuarioDev d : gestor.getEquipe()) {
                     cbDev.addItem(d);
                 }
             }
-
             private void criarTarefa() {
                 UsuarioDev dev = (UsuarioDev) cbDev.getSelectedItem();
                 if (dev == null) {
@@ -428,17 +478,17 @@ public class Dashboard extends JFrame {
                 gestor.criarAtribuirTarefa(desc, prazo, imp, dev.getId(), horas);
                 JOptionPane.showMessageDialog(this, "Tarefa criada e atribuída.");
                 txtDesc.setText("");
+                ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
             }
         }
 
-        private class CriarTarefaEmProjetoPanel extends JPanel {
+        private class CriarTarefaEmProjetoPanel extends JPanel implements Refreshable {
             private JComboBox<UsuarioDev> cbDev;
             private JComboBox<Projeto> cbProjeto;
             private JTextField txtDesc;
             private JSpinner spPrazo;
             private JComboBox<NivelImportancia> cbImportancia;
             private JSpinner spHoras;
-
             CriarTarefaEmProjetoPanel() {
                 setLayout(new GridLayout(0,2,5,5));
                 add(new JLabel("Desenvolvedor:"));
@@ -461,21 +511,21 @@ public class Dashboard extends JFrame {
                 add(spHoras);
                 JButton btnCriar = new JButton("Criar Tarefa");
                 add(btnCriar);
-                carregarDados();
+                refresh();
                 btnCriar.addActionListener(e -> criarTarefa());
             }
-
-            private void carregarDados() {
+            @Override
+            public void refresh() {
                 cbDev.removeAllItems();
                 for (UsuarioDev d : gestor.getEquipe()) {
                     cbDev.addItem(d);
                 }
                 cbProjeto.removeAllItems();
-                for (Projeto p : Sistema.getInstance().getProjetos()) {
+                // FILTRO: apenas projetos da equipe
+                for (Projeto p : Sistema.getInstance().getProjetosDaEquipe(gestor.getId())) {
                     cbProjeto.addItem(p);
                 }
             }
-
             private void criarTarefa() {
                 UsuarioDev dev = (UsuarioDev) cbDev.getSelectedItem();
                 Projeto proj = (Projeto) cbProjeto.getSelectedItem();
@@ -497,15 +547,15 @@ public class Dashboard extends JFrame {
                 gestor.criarAtribuirTarefaEmProjeto(desc, prazo, imp, dev.getId(), proj.getId(), horas);
                 JOptionPane.showMessageDialog(this, "Tarefa adicionada ao projeto.");
                 txtDesc.setText("");
+                ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
             }
         }
     }
 
-    private class ValidarFinalizacoesPanel extends JPanel {
+    private class ValidarFinalizacoesPanel extends JPanel implements Refreshable {
         private UsuarioGestor gestor;
         private JTable table;
         private DefaultTableModel model;
-
         public ValidarFinalizacoesPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
@@ -514,11 +564,11 @@ public class Dashboard extends JFrame {
             add(new JScrollPane(table), BorderLayout.CENTER);
             JButton btnValidar = new JButton("Validar Selecionada");
             add(btnValidar, BorderLayout.SOUTH);
-            carregarTarefasFeito();
+            refresh();
             btnValidar.addActionListener(e -> validar());
         }
-
-        private void carregarTarefasFeito() {
+        @Override
+        public void refresh() {
             model.setRowCount(0);
             try {
                 for (Tarefa t : Sistema.getInstance().getTarefasDaEquipe(gestor.getId())) {
@@ -530,7 +580,6 @@ public class Dashboard extends JFrame {
                 JOptionPane.showMessageDialog(this, "Erro ao carregar: " + ex.getMessage());
             }
         }
-
         private void validar() {
             int linha = table.getSelectedRow();
             if (linha == -1) {
@@ -543,7 +592,7 @@ public class Dashboard extends JFrame {
                 tarefa = Sistema.getInstance().getTarefas().stream().filter(t -> t.getId() == id).findFirst().orElse(null);
                 if (tarefa != null) {
                     gestor.validarFinalizacao(tarefa);
-                    carregarTarefasFeito();
+                    ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao validar: " + ex.getMessage());
@@ -551,11 +600,10 @@ public class Dashboard extends JFrame {
         }
     }
 
-    private class SolicitacoesPanel extends JPanel {
+    private class SolicitacoesPanel extends JPanel implements Refreshable {
         private UsuarioGestor gestor;
         private JTable table;
         private DefaultTableModel model;
-
         public SolicitacoesPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
@@ -570,19 +618,18 @@ public class Dashboard extends JFrame {
             botoes.add(btnRejeitar);
             botoes.add(btnRefresh);
             add(botoes, BorderLayout.SOUTH);
-            carregarSolicitacoes();
+            refresh();
             btnAprovar.addActionListener(e -> processar(true));
             btnRejeitar.addActionListener(e -> processar(false));
-            btnRefresh.addActionListener(e -> carregarSolicitacoes());
+            btnRefresh.addActionListener(e -> refresh());
         }
-
-        private void carregarSolicitacoes() {
+        @Override
+        public void refresh() {
             model.setRowCount(0);
             for (SolicitacaoMudanca s : gestor.listarSolicitacoesPendentes()) {
                 model.addRow(new Object[]{s.getId(), s.getSolicitante().getNome(), s.getJustificativa(), s.getStatus()});
             }
         }
-
         private void processar(boolean aprovar) {
             int linha = table.getSelectedRow();
             if (linha == -1) {
@@ -599,17 +646,16 @@ public class Dashboard extends JFrame {
             }
             if (solicitacao != null) {
                 gestor.processarSolicitacaoMudanca(solicitacao, aprovar);
-                carregarSolicitacoes();
+                ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
             }
         }
     }
 
-    private class ReatribuirAtrasadasPanel extends JPanel {
+    private class ReatribuirAtrasadasPanel extends JPanel implements Refreshable {
         private UsuarioGestor gestor;
         private JTable table;
         private DefaultTableModel model;
         private JComboBox<UsuarioDev> cbNovoDev;
-
         public ReatribuirAtrasadasPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
@@ -625,13 +671,12 @@ public class Dashboard extends JFrame {
             JButton btnRefresh = new JButton("Atualizar");
             bottom.add(btnRefresh);
             add(bottom, BorderLayout.SOUTH);
-            carregarTarefasAtrasadas();
-            carregarDevs();
+            refresh();
             btnReatribuir.addActionListener(e -> reatribuir());
-            btnRefresh.addActionListener(e -> { carregarTarefasAtrasadas(); carregarDevs(); });
+            btnRefresh.addActionListener(e -> refresh());
         }
-
-        private void carregarTarefasAtrasadas() {
+        @Override
+        public void refresh() {
             model.setRowCount(0);
             try {
                 for (Tarefa t : Sistema.getInstance().getTarefasDaEquipe(gestor.getId())) {
@@ -642,15 +687,11 @@ public class Dashboard extends JFrame {
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao carregar: " + ex.getMessage());
             }
-        }
-
-        private void carregarDevs() {
             cbNovoDev.removeAllItems();
             for (UsuarioDev d : gestor.getEquipe()) {
                 cbNovoDev.addItem(d);
             }
         }
-
         private void reatribuir() {
             int linha = table.getSelectedRow();
             if (linha == -1) {
@@ -665,7 +706,7 @@ public class Dashboard extends JFrame {
                 tarefa = Sistema.getInstance().getTarefas().stream().filter(t -> t.getId() == id).findFirst().orElse(null);
                 if (tarefa != null) {
                     gestor.reatribuirTarefaAtrasada(tarefa, novoDev);
-                    carregarTarefasAtrasadas();
+                    ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
@@ -673,10 +714,9 @@ public class Dashboard extends JFrame {
         }
     }
 
-    private class RelatorioDiarioPanel extends JPanel {
+    private class RelatorioDiarioPanel extends JPanel implements Refreshable {
         private UsuarioGestor gestor;
         private JTextArea textArea;
-
         public RelatorioDiarioPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
@@ -686,23 +726,25 @@ public class Dashboard extends JFrame {
             JButton btnGerar = new JButton("Gerar Relatório Diário");
             add(btnGerar, BorderLayout.SOUTH);
             btnGerar.addActionListener(e -> gerar());
+            refresh();
         }
-
-        private void gerar() {
-            // Gera e exibe o relatório diário (também persiste no banco)
-            Sistema.getInstance().gerarRelatorioDiario();
-            // Recupera o último relatório (simples: mostra uma mensagem)
-            textArea.setText("Relatório diário gerado com sucesso. Verifique o console para detalhes.");
-            // Opcional: carregar o relatório do banco
+        @Override
+        public void refresh() {
             try {
                 java.util.List<Relatorio> rels = Sistema.getInstance().getRelatorios();
                 if (!rels.isEmpty()) {
                     Relatorio ultimo = rels.get(rels.size()-1);
                     textArea.setText(ultimo.getConteudo());
+                } else {
+                    textArea.setText("Nenhum relatório gerado ainda.");
                 }
             } catch (Exception ex) {
-                // ignora
+                textArea.setText("Erro ao carregar relatório.");
             }
+        }
+        private void gerar() {
+            Sistema.getInstance().gerarRelatorioDiario();
+            ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
         }
     }
 }
