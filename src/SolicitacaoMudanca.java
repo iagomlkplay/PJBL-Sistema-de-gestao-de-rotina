@@ -18,11 +18,16 @@ public class SolicitacaoMudanca {
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     public String getJustificativa() { return justificativa; }
+
+    // Justificativa é definida no construtor e nunca alterada. Não precisa realmente existir.
     public void setJustificativa(String justificativa) { this.justificativa = justificativa; }
+
     public StatusSolicitacao getStatus() { return status; }
     public void setStatus(StatusSolicitacao status) { this.status = status; }
     public Date getDataCriacao() { return dataCriacao; }
     public void setDataCriacao(Date dataCriacao) { this.dataCriacao = dataCriacao; }
     public UsuarioDev getSolicitante() { return solicitante; }
+
+    // Solicitante é definida no construtor e nunca alterada. Também não precisa realmente existir.
     public void setSolicitante(UsuarioDev solicitante) { this.solicitante = solicitante; }
 }

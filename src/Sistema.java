@@ -1,7 +1,6 @@
 import java.util.*;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.sql.SQLException;
 import java.util.stream.Collectors;
 
 public class Sistema {

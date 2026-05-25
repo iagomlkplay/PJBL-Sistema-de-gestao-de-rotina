@@ -89,10 +89,6 @@ public class UsuarioGestor extends Usuario {
     }
 
     // RF09: criar tarefa avulsa (sem projeto)
-    public void criarAtribuirTarefa(String descricao, Date prazo, NivelImportancia importancia, int devId) {
-        criarAtribuirTarefa(descricao, prazo, importancia, devId, 1.0);
-    }
-
     public void criarAtribuirTarefa(String descricao, Date prazo, NivelImportancia importancia, int devId, double horasEstimadas) {
         Sistema sistema = Sistema.getInstance();
         UsuarioDev dev = sistema.buscarDevPorId(devId);
@@ -107,10 +103,6 @@ public class UsuarioGestor extends Usuario {
     }
 
     // RF09: criar tarefa dentro de um projeto
-    public void criarAtribuirTarefaEmProjeto(String descricao, Date prazo, NivelImportancia importancia, int devId, int projetoId) {
-        criarAtribuirTarefaEmProjeto(descricao, prazo, importancia, devId, projetoId, 1.0);
-    }
-
     public void criarAtribuirTarefaEmProjeto(String descricao, Date prazo, NivelImportancia importancia,
                                              int devId, int projetoId, double horasEstimadas) {
         Sistema sistema = Sistema.getInstance();
@@ -282,5 +274,7 @@ public class UsuarioGestor extends Usuario {
     }
 
     public String getDepartamento() { return departamento; }
+
+    // setDepartamento() não é usado porque o departamento é definido no construtor e nunca alterado. Pode ser removido.
     public void setDepartamento(String departamento) { this.departamento = departamento; }
 }

@@ -69,6 +69,7 @@ public class UsuarioDAO {
         return devs;
     }
 
+    // Método para uma futura implementação. Por hora, o sistema não permite trocar o gestor de um desenvolvedor após o cadastro.
     public void atualizarGestorDoDev(int devId, int novoGestorId) throws SQLException {
         String sql = "UPDATE usuarios SET gestor_id = ? WHERE id = ? AND tipo = 'DEV'";
         try (Connection conn = DatabaseConnection.getConnection();

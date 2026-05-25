@@ -191,6 +191,7 @@ public class UsuarioDev extends Usuario {
         return soma / minhasTarefas.size();
     }
 
+    /* visualizarTarefasDoProjeto() nunca é chamado, já que acabou que a interface usa outros métodos para exibir tarefas
     // Visualizar tarefas de um projeto específico (consulta direta ao banco)
     public void visualizarTarefasDoProjeto(Projeto projeto) {
         try {
@@ -203,10 +204,14 @@ public class UsuarioDev extends Usuario {
             System.err.println("Erro ao listar tarefas do projeto: " + e.getMessage());
         }
     }
+    */
 
     // Getters e setters
+
+    // Métodos do campo de especialidades, pode ser implementado para uma versão futura.
     public List<String> getEspecialidades() { return especialidades; }
     public void setEspecialidades(List<String> especialidades) { this.especialidades = especialidades; }
+
     public int getGestorId() { return gestorId; }
     public void setGestorId(int gestorId) { this.gestorId = gestorId; }
 }
