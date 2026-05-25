@@ -106,7 +106,7 @@ public class UsuarioGestor extends Usuario {
         System.out.println("Tarefa criada com " + horasEstimadas + "h estimadas e atribuída ao dev " + dev.getNome());
     }
 
-    // RF09: criar tarefa dentro de um projeto (com verificação de equipe - item 4)
+    // RF09: criar tarefa dentro de um projeto
     public void criarAtribuirTarefaEmProjeto(String descricao, Date prazo, NivelImportancia importancia, int devId, int projetoId) {
         criarAtribuirTarefaEmProjeto(descricao, prazo, importancia, devId, projetoId, 1.0);
     }
@@ -126,7 +126,7 @@ public class UsuarioGestor extends Usuario {
             System.out.println("Projeto não encontrado.");
             return;
         }
-        // Verifica se o projeto pertence à equipe (item 4)
+        // Verifica se o projeto pertence à equipe
         List<Tarefa> tarefasProjeto;
         try {
             tarefasProjeto = tarefaDAO.listarPorProjeto(projetoId, usuarioDAO, projetoDAO);
@@ -203,7 +203,7 @@ public class UsuarioGestor extends Usuario {
             }
         } else if (item instanceof Projeto) {
             Projeto projeto = (Projeto) item;
-            // Verifica se o projeto pertence à equipe (item 4)
+            // Verifica se o projeto pertence à equipe
             List<Tarefa> tarefasProjeto;
             try {
                 tarefasProjeto = tarefaDAO.listarPorProjeto(projeto.getId(), usuarioDAO, projetoDAO);
@@ -276,7 +276,11 @@ public class UsuarioGestor extends Usuario {
         }
     }
 
-    // Getters e setters
+    @Override
+    public String toString() {
+        return this.getNome(); // Exibe o nome do gestor no combo de cadastro
+    }
+
     public String getDepartamento() { return departamento; }
     public void setDepartamento(String departamento) { this.departamento = departamento; }
 }
