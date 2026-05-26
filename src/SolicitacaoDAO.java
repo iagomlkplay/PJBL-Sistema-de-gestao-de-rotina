@@ -4,13 +4,18 @@ import java.util.List;
 
 public class SolicitacaoDAO {
     public void inserir(SolicitacaoMudanca solicitacao) throws SQLException {
-        String sql = "INSERT INTO solicitacoes (justificativa, status, data_criacao, dev_solicitante_id) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO solicitacoes (justificativa, status, data_criacao, dev_solicitante_id, tarefa_id) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, solicitacao.getJustificativa());
             stmt.setString(2, solicitacao.getStatus().name());
             stmt.setTimestamp(3, new Timestamp(solicitacao.getDataCriacao().getTime()));
             stmt.setInt(4, solicitacao.getSolicitante().getId());
+            if (solicitacao.getTarefaRelacionada() != null) {
+                stmt.setInt(5, solicitacao.getTarefaRelacionada().getId());
+            } else {
+                stmt.setNull(5, Types.INTEGER);
+            }
             stmt.executeUpdate();
             ResultSet rs = stmt.getGeneratedKeys();
             if (rs.next()) {
@@ -26,10 +31,14 @@ public class SolicitacaoDAO {
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             UsuarioDAO usuarioDAO = new UsuarioDAO();
+            TarefaDAO tarefaDAO = new TarefaDAO();
+            ProjetoDAO projetoDAO = new ProjetoDAO();
             while (rs.next()) {
                 int solicitanteId = rs.getInt("dev_solicitante_id");
                 UsuarioDev solicitante = (UsuarioDev) usuarioDAO.buscarPorId(solicitanteId);
-                SolicitacaoMudanca s = new SolicitacaoMudanca(rs.getString("justificativa"), solicitante);
+                int tarefaId = rs.getInt("tarefa_id");
+                Tarefa tarefa = tarefaId != 0 ? tarefaDAO.buscarPorId(tarefaId, usuarioDAO, projetoDAO) : null;
+                SolicitacaoMudanca s = new SolicitacaoMudanca(rs.getString("justificativa"), solicitante, tarefa);
                 s.setId(rs.getInt("id"));
                 s.setStatus(StatusSolicitacao.valueOf(rs.getString("status")));
                 s.setDataCriacao(rs.getTimestamp("data_criacao"));
@@ -49,10 +58,14 @@ public class SolicitacaoDAO {
             stmt.setInt(1, gestorId);
             ResultSet rs = stmt.executeQuery();
             UsuarioDAO usuarioDAO = new UsuarioDAO();
+            TarefaDAO tarefaDAO = new TarefaDAO();
+            ProjetoDAO projetoDAO = new ProjetoDAO();
             while (rs.next()) {
                 int solicitanteId = rs.getInt("dev_solicitante_id");
                 UsuarioDev solicitante = (UsuarioDev) usuarioDAO.buscarPorId(solicitanteId);
-                SolicitacaoMudanca s = new SolicitacaoMudanca(rs.getString("justificativa"), solicitante);
+                int tarefaId = rs.getInt("tarefa_id");
+                Tarefa tarefa = tarefaId != 0 ? tarefaDAO.buscarPorId(tarefaId, usuarioDAO, projetoDAO) : null;
+                SolicitacaoMudanca s = new SolicitacaoMudanca(rs.getString("justificativa"), solicitante, tarefa);
                 s.setId(rs.getInt("id"));
                 s.setStatus(StatusSolicitacao.valueOf(rs.getString("status")));
                 s.setDataCriacao(rs.getTimestamp("data_criacao"));
