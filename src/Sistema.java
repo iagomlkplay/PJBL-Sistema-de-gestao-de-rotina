@@ -1,3 +1,4 @@
+import javax.swing.*;
 import java.util.*;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -119,7 +120,6 @@ public class Sistema {
     }
 
     // === Listagens ===
-
     public List<UsuarioDev> getDevs() {
         try {
             List<UsuarioDev> devs = new ArrayList<>();
@@ -220,27 +220,10 @@ public class Sistema {
     public void notificarGestorMudancaStatus(Tarefa tarefa, UsuarioDev dev) {
         UsuarioGestor gestor = buscarGestorPorDev(dev);
         if (gestor != null) {
-            System.out.println(">>> NOTIFICAÇÃO para gestor " + gestor.getNome() +
-                    ": O dev " + dev.getNome() + " alterou a tarefa " + tarefa.getId() +
-                    " para " + tarefa.getStatus());
-        }
-        verificarItensFeitoEAtrasados(gestor);
-    }
-
-    private void verificarItensFeitoEAtrasados(UsuarioGestor gestor) {
-        if (gestor == null) return;
-        try {
-            List<Tarefa> tarefasEquipe = getTarefasDaEquipe(gestor.getId());
-            long feitos = tarefasEquipe.stream().filter(t -> t.getStatus() == StatusTarefa.FEITO).count();
-            if (feitos > 0) {
-                System.out.println(">>> NOTIFICAÇÃO: Existem " + feitos + " tarefas com status FEITO na sua equipe.");
-            }
-            long atrasados = tarefasEquipe.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
-            if (atrasados > 0) {
-                System.out.println(">>> ALERTA: Existem " + atrasados + " tarefas com status ATRASADO na sua equipe.");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+            String mensagem = "O dev " + dev.getNome() + " alterou a tarefa " + tarefa.getId() +
+                    " para " + tarefa.getStatus();
+            System.out.println(">>> NOTIFICAÇÃO para gestor " + gestor.getNome() + ": " + mensagem);
+            mostrarPopUp(mensagem, "Tarefa Alterada", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -258,8 +241,9 @@ public class Sistema {
                     // Notifica o gestor
                     UsuarioGestor gestor = buscarGestorPorDev(t.getDevResponsavel());
                     if (gestor != null) {
-                        System.out.println(">>> ALERTA: Tarefa atrasada notificada ao gestor " + gestor.getNome());
-                        verificarItensFeitoEAtrasados(gestor);
+                        String msg = "Tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") expirou e foi marcada como ATRASADA.";
+                        System.out.println(">>> ALERTA: " + msg);
+                        mostrarPopUp(msg, "Prazo Expirado", JOptionPane.WARNING_MESSAGE);
                     }
                 }
             }
@@ -278,7 +262,6 @@ public class Sistema {
     }
 
     // === Relatório ===
-
     public String gerarRelatorioEquipe(int gestorId) {
         try {
             List<UsuarioDev> equipe = usuarioDAO.listarDevsPorGestor(gestorId);
@@ -334,7 +317,7 @@ public class Sistema {
         }
     }
 
-    // Timer
+    // === Timer ===
     public void iniciarVerificadorPrazos(long intervaloMilissegundos) {
         if (verificadorTimer != null) {
             verificadorTimer.cancel();
@@ -353,5 +336,12 @@ public class Sistema {
             verificadorTimer.cancel();
             verificadorTimer = null;
         }
+    }
+
+    // === Método auxiliar para exibir pop‑up na thread correta ===
+    private void mostrarPopUp(String mensagem, String titulo, int tipoMensagem) {
+        SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(null, mensagem, titulo, tipoMensagem);
+        });
     }
 }
