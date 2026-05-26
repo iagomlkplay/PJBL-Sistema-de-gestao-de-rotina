@@ -159,7 +159,7 @@ public class UsuarioDev extends Usuario {
 
     // RF06: enviar relatório final
     public void enviarRelatorioFinal(Object item, String conteudo) {
-        Relatorio relatorio = new Relatorio(conteudo);
+        Relatorio relatorio = new Relatorio(conteudo, this);  // passa o próprio dev
         relatorio.setDataEnvio(new java.util.Date());
         if (item instanceof Tarefa) {
             relatorio.setTarefaRelacionada((Tarefa) item);
@@ -177,7 +177,7 @@ public class UsuarioDev extends Usuario {
 
     // RF07: solicitar reorganização
     public void solicitarReorganizacao(Tarefa tarefa, String justificativa) {
-        SolicitacaoMudanca solicitacao = new SolicitacaoMudanca(justificativa, this, tarefa);
+        Solicitacao solicitacao = new Solicitacao(justificativa, this, tarefa);
         Sistema.getInstance().adicionarSolicitacao(solicitacao);
         System.out.println("Solicitação de reorganização para tarefa " + tarefa.getId() + " enviada.");
     }
