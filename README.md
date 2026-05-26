@@ -1,6 +1,6 @@
 # Sistema de Gestão de Rotina
 
-Sistema desenvolvido em **Java** para gerenciar projetos, tarefas, prazos e o desempenho de equipes de desenvolvimento. O sistema implementa os papéis de **Desenvolvedor (DEV)** e **Gestor (GESTOR)**, com validação de tarefas, métricas de tempo (horas), notificações automáticas e relatórios diários.
+Sistema desenvolvido em **Java** para gerenciar projetos, tarefas, prazos e o desempenho de equipes de desenvolvimento. O sistema implementa os papéis de **Desenvolvedor (DEV)** e **Gestor (GESTOR)**, com validação de tarefas, métricas de tempo (horas), notificações automáticas e relatórios.
 
 > **Status atual:** Lógica de negócios e persistência em banco de dados (MySQL). **Interface gráfica (Swing) ainda será implementada**
 
@@ -28,7 +28,7 @@ Sistema desenvolvido em **Java** para gerenciar projetos, tarefas, prazos e o de
 
 ### Automações e Notificações
 - **RF13:** Notificar o gestor automaticamente quando um DEV modificar o status de uma tarefa.
-- **RF14:** Gerar relatório diário automático (tarefas cumpridas, atrasadas, relatórios enviados).
+- **RF14:** Gerar relatório automático (tarefas cumpridas, atrasadas, relatórios enviados).
 - **RF15:** Alterar automaticamente tarefas `PENDENTES` para `ATRASADAS` ao expirar o prazo.
 - **RF16:** Notificar o gestor se existirem tarefas com status `FEITO`.
 - **RF17:** Alertar o gestor se existirem tarefas com status `ATRASADO`.
@@ -64,14 +64,14 @@ O projeto é organizado em camadas: **model** (entidades), **dao** (acesso a dad
 
 ### Classe `Sistema`
 
-Centraliza as operações do sistema, como cadastro, autenticação, obtenção de listas (que delegam aos DAOs), notificações, verificação de prazos expirados, geração de relatório diário e controle de timer para verificação automática de prazos.
+Centraliza as operações do sistema, como cadastro, autenticação, obtenção de listas (que delegam aos DAOs), notificações, verificação de prazos expirados, geração de relatório e controle de timer para verificação automática de prazos.
 
 Principais métodos:
 - `realizarCadastro(Usuario)`, `autenticar(email, senha)`
 - `adicionarProjeto()`, `adicionarTarefa()`, `adicionarRelatorio()`, `adicionarSolicitacao()`
 - `buscarDevPorId()`, `buscarProjetoPorId()`, `buscarGestorPorDev()`
 - `getUsuarios()`, `getDevs()`, `getGestores()`, `getProjetos()`, `getTarefas()`, `getRelatorios()`, `getSolicitacoes()`
-- `notificarGestorMudancaStatus()`, `verificarPrazosExpirados()`, `gerarRelatorioDiario()`
+- `notificarGestorMudancaStatus()`, `verificarPrazosExpirados()`, `gerarRelatorio()`
 - `iniciarVerificadorPrazos(long intervalo)`, `pararVerificadorPrazos()`
 
 ### Enums
@@ -94,7 +94,7 @@ Principais métodos:
 7. **Expiração de prazos** – O método `Sistema.verificarPrazosExpirados()` é executado periodicamente por um `Timer` (ou pode ser chamado manualmente). Tarefas e projetos com status `PENDENTE` e prazo anterior à data atual são alterados para `ATRASADO`.
 8. **Reatribuição de tarefas atrasadas** – O gestor pode usar `reatribuirTarefaAtrasada()` para transferir uma tarefa `ATRASADO` para outro membro da equipe.
 9. **Solicitações de reorganização** – Desenvolvedor chama `solicitarReorganizacao()`. O gestor lista as solicitações pendentes e decide aprovar ou rejeitar (`processarSolicitacaoMudanca()`). Em caso de aprovação, o gestor pode reatribuir tarefas manualmente.
-10. **Relatório diário** – `Sistema.gerarRelatorioDiario()` produz um resumo com quantidade de tarefas cumpridas (`PRONTO`), atrasadas, e lista os relatórios enviados pelos desenvolvedores. O relatório é armazenado no banco.
+10. **Relatório** – `Sistema.gerarRelatorio()` produz um resumo com quantidade de tarefas cumpridas (`PRONTO`), atrasadas, e lista os relatórios enviados pelos desenvolvedores. O relatório é armazenado no banco.
 11. **Métrica de progresso** – Progresso da tarefa = `min(100, (horasTrabalhadas / horasEstimadas) * 100)` (ou 100% se status `FEITO`/`PRONTO`). Progresso do projeto = média do progresso de suas tarefas. Progresso do desenvolvedor = média do progresso de todas as suas tarefas.
 
 ---
