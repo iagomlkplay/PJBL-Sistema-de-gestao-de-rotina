@@ -3,7 +3,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SolicitacaoDAO {
-    public void inserir(SolicitacaoMudanca solicitacao) throws SQLException {
+    public void inserir(Solicitacao solicitacao) throws SQLException {
         String sql = "INSERT INTO solicitacoes (justificativa, status, data_criacao, dev_solicitante_id, tarefa_id) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -24,8 +24,8 @@ public class SolicitacaoDAO {
         }
     }
 
-    public List<SolicitacaoMudanca> listarTodos() throws SQLException {
-        List<SolicitacaoMudanca> lista = new ArrayList<>();
+    public List<Solicitacao> listarTodos() throws SQLException {
+        List<Solicitacao> lista = new ArrayList<>();
         String sql = "SELECT * FROM solicitacoes";
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -38,7 +38,7 @@ public class SolicitacaoDAO {
                 UsuarioDev solicitante = (UsuarioDev) usuarioDAO.buscarPorId(solicitanteId);
                 int tarefaId = rs.getInt("tarefa_id");
                 Tarefa tarefa = tarefaId != 0 ? tarefaDAO.buscarPorId(tarefaId, usuarioDAO, projetoDAO) : null;
-                SolicitacaoMudanca s = new SolicitacaoMudanca(rs.getString("justificativa"), solicitante, tarefa);
+                Solicitacao s = new Solicitacao(rs.getString("justificativa"), solicitante, tarefa);
                 s.setId(rs.getInt("id"));
                 s.setStatus(StatusSolicitacao.valueOf(rs.getString("status")));
                 s.setDataCriacao(rs.getTimestamp("data_criacao"));
@@ -48,8 +48,8 @@ public class SolicitacaoDAO {
         return lista;
     }
 
-    public List<SolicitacaoMudanca> listarPorGestor(int gestorId) throws SQLException {
-        List<SolicitacaoMudanca> lista = new ArrayList<>();
+    public List<Solicitacao> listarPorGestor(int gestorId) throws SQLException {
+        List<Solicitacao> lista = new ArrayList<>();
         String sql = "SELECT s.* FROM solicitacoes s " +
                 "JOIN usuarios u ON s.dev_solicitante_id = u.id " +
                 "WHERE u.gestor_id = ?";
@@ -65,7 +65,7 @@ public class SolicitacaoDAO {
                 UsuarioDev solicitante = (UsuarioDev) usuarioDAO.buscarPorId(solicitanteId);
                 int tarefaId = rs.getInt("tarefa_id");
                 Tarefa tarefa = tarefaId != 0 ? tarefaDAO.buscarPorId(tarefaId, usuarioDAO, projetoDAO) : null;
-                SolicitacaoMudanca s = new SolicitacaoMudanca(rs.getString("justificativa"), solicitante, tarefa);
+                Solicitacao s = new Solicitacao(rs.getString("justificativa"), solicitante, tarefa);
                 s.setId(rs.getInt("id"));
                 s.setStatus(StatusSolicitacao.valueOf(rs.getString("status")));
                 s.setDataCriacao(rs.getTimestamp("data_criacao"));
