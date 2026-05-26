@@ -174,10 +174,10 @@ public class UsuarioDev extends Usuario {
     }
 
     // RF07: solicitar reorganização
-    public void solicitarReorganizacao(String justificativa) {
-        SolicitacaoMudanca solicitacao = new SolicitacaoMudanca(justificativa, this);
+    public void solicitarReorganizacao(Tarefa tarefa, String justificativa) {
+        SolicitacaoMudanca solicitacao = new SolicitacaoMudanca(justificativa, this, tarefa);
         Sistema.getInstance().adicionarSolicitacao(solicitacao);
-        System.out.println("Solicitação de reorganização enviada. Justificativa: " + justificativa);
+        System.out.println("Solicitação de reorganização para tarefa " + tarefa.getId() + " enviada.");
     }
 
     // Progresso total baseado apenas em tarefas (carregadas do banco)
@@ -205,6 +205,11 @@ public class UsuarioDev extends Usuario {
         }
     }
     */
+
+    @Override
+    public String toString() {
+        return this.getNome();
+    }
 
     // Getters e setters
 
