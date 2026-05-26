@@ -86,6 +86,11 @@ public class Projeto {
         }
     }
 
+    @Override
+    public String toString() {
+        return this.nome;
+    }
+
     // Getters e Setters (sem lista de tarefas)
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
