@@ -47,36 +47,80 @@ public class UsuarioGestor extends Usuario {
         StringBuilder sb = new StringBuilder();
         List<UsuarioDev> equipe = getEquipe();
         Sistema sistema = Sistema.getInstance();
-        sb.append("--- Projetos da equipe ---\n");
+
+        // === Projetos da equipe ===
+        sb.append("========================================================\n");
+        sb.append("PROJETOS DA EQUIPE\n");
+        sb.append("========================================================\n\n");
+
         for (Projeto p : sistema.getProjetos()) {
-            boolean temTarefaNaEquipe = false;
+            List<Tarefa> tarefasProjeto = null;
             try {
-                List<Tarefa> tarefasProjeto = tarefaDAO.listarPorProjeto(p.getId(), usuarioDAO, projetoDAO);
+                tarefasProjeto = tarefaDAO.listarPorProjeto(p.getId(), usuarioDAO, projetoDAO);
+            } catch (SQLException e) {
+                sb.append("Erro ao carregar tarefas do projeto ").append(p.getNome()).append("\n");
+                continue;
+            }
+
+            // Verifica se o projeto tem pelo menos uma tarefa de um dev da equipe
+            boolean pertenceEquipe = tarefasProjeto.stream()
+                    .anyMatch(t -> equipe.stream().anyMatch(d -> d.getId() == t.getDevResponsavel().getId()));
+
+            if (pertenceEquipe) {
+                sb.append("▶ PROJETO: ").append(p.getNome()).append(" (ID ").append(p.getId()).append(")\n");
+                sb.append("  Status: ").append(p.getStatus()).append(" | Importância: ").append(p.getImportancia())
+                        .append(" | Prazo: ").append(p.getPrazo()).append("\n");
+                sb.append("  Progresso: ").append(String.format("%.1f%%", p.calcularProgresso(tarefasProjeto))).append("\n");
+                sb.append("  Tarefas:\n");
+
                 for (Tarefa t : tarefasProjeto) {
-                    int devId = t.getDevResponsavel().getId();
-                    if (equipe.stream().anyMatch(d -> d.getId() == devId)) {
-                        temTarefaNaEquipe = true;
-                        break;
+                    // Verifica se o dev da tarefa está na equipe
+                    if (equipe.stream().anyMatch(d -> d.getId() == t.getDevResponsavel().getId())) {
+                        sb.append("    • ").append(t.getDescricao()).append(" (ID ").append(t.getId()).append(")\n");
+                        sb.append("      Status: ").append(t.getStatus()).append(" | Progresso: ")
+                                .append(String.format("%.1f%%", t.calcularProgresso())).append("\n");
+                        sb.append("      Horas: ").append(String.format("%.1f/%.1f", t.getHorasTrabalhadas(), t.getHorasEstimadas()))
+                                .append(" | Responsável: ").append(t.getDevResponsavel().getNome()).append("\n");
                     }
                 }
-                if (temTarefaNaEquipe) {
-                    sb.append(p.getInformacoesDetalhadas(tarefasProjeto)).append("\n");
-                }
-            } catch (SQLException e) {
-                sb.append(p.getInformacoesDetalhadas()).append(" (erro ao carregar tarefas)\n");
+                sb.append("\n");
             }
         }
-        sb.append("--- Tarefas da equipe ---\n");
+
+        // === Tarefas avulsas (sem projeto) ===
+        sb.append("========================================================\n");
+        sb.append("TAREFAS AVULSAS (SEM PROJETO)\n");
+        sb.append("========================================================\n\n");
+
         for (UsuarioDev dev : equipe) {
             try {
                 List<Tarefa> tarefasDev = tarefaDAO.listarPorDev(dev.getId(), usuarioDAO, projetoDAO);
+                boolean hasAvulsa = false;
                 for (Tarefa t : tarefasDev) {
-                    sb.append(t.getInformacoesDetalhadas()).append(" - Responsável: ").append(dev.getNome()).append("\n");
+                    if (t.getProjetoPai() == null) {
+                        if (!hasAvulsa) {
+                            sb.append("Desenvolvedor: ").append(dev.getNome()).append(" (ID ").append(dev.getId()).append(")\n");
+                            hasAvulsa = true;
+                        }
+                        sb.append("  • ").append(t.getDescricao()).append(" (ID ").append(t.getId()).append(")\n");
+                        sb.append("    Status: ").append(t.getStatus()).append(" | Prazo: ").append(t.getPrazo()).append("\n");
+                        sb.append("    Progresso: ").append(String.format("%.1f%%", t.calcularProgresso()))
+                                .append(" | Horas: ").append(String.format("%.1f/%.1f", t.getHorasTrabalhadas(), t.getHorasEstimadas())).append("\n");
+                    }
                 }
+                if (hasAvulsa) sb.append("\n");
             } catch (SQLException e) {
                 sb.append("Erro ao listar tarefas do dev ").append(dev.getNome()).append("\n");
             }
         }
+
+        if (sb.toString().contains("PROJETOS DA EQUIPE") && !sb.toString().contains("▶ PROJETO:")) {
+            sb.append("Nenhum projeto com tarefas da equipe.\n\n");
+        }
+        if (sb.toString().contains("TAREFAS AVULSAS") && !sb.toString().contains("•")) {
+            sb.append("Nenhuma tarefa avulsa na equipe.\n");
+        }
+
         return sb.toString();
     }
 
