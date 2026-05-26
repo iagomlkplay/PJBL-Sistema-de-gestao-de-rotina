@@ -216,15 +216,8 @@ public class Sistema {
 
     public List<Projeto> getProjetosDaEquipe(int gestorId) {
         try {
-            List<Tarefa> tarefasEquipe = getTarefasDaEquipe(gestorId);
-            Set<Integer> projetoIds = tarefasEquipe.stream()
-                    .map(Tarefa::getProjetoPai)
-                    .filter(Objects::nonNull)
-                    .map(Projeto::getId)
-                    .collect(Collectors.toSet());
-            return getProjetos().stream()
-                    .filter(p -> projetoIds.contains(p.getId()))
-                    .collect(Collectors.toList());
+            // Retorna projetos que pertencem ao gestor (gestor_id = gestorId)
+            return projetoDAO.listarPorGestor(gestorId);
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
