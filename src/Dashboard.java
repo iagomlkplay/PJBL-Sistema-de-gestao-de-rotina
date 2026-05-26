@@ -854,7 +854,6 @@ public class Dashboard extends JFrame {
             JButton btnGerar = new JButton("Gerar Relatório");
             add(btnGerar, BorderLayout.SOUTH);
             btnGerar.addActionListener(e -> gerar());
-            refresh();
         }
         @Override
         public void refresh() {
