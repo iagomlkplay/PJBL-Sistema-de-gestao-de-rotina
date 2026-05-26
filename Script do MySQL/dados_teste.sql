@@ -53,30 +53,21 @@ INSERT INTO usuarios (nome, cpf, email, senha, tipo, departamento, gestor_id) VA
 ('Wagner Lima', '212.121.212-12', 'wagner.lima@email.com', 'senha', 'DEV', NULL, 5),
 ('Yara Nunes', '222.222.222-23', 'yara.nunes@email.com', 'senha', 'DEV', NULL, 5);
 
--- ------------------------------------------------------------
--- 3. Inserir Projetos (15 projetos com diferentes status e prazos)
--- ------------------------------------------------------------
+-- ---------------------
+-- 3. Inserir Projetos
+-- ---------------------
 
-INSERT INTO projetos (nome, prazo, importancia, status) VALUES
-('Sistema de BI', '2027-12-31', 'ALTA', 'PENDENTE'),
-('Portal de Transparência', '2027-10-15', 'URGENTE', 'PENDENTE'),
-('Aplicativo Mobile', '2024-09-30', 'MEDIA', 'PRONTO'),
-('Migração de Dados', '2026-08-20', 'ALTA', 'FEITO'),
-('Atualização de Segurança', '2027-11-10', 'URGENTE', 'PENDENTE'),
-('E-commerce B2B', '2027-01-20', 'ALTA', 'PENDENTE'),
-('Painel de KPIs', '2024-07-01', 'MEDIA', 'PRONTO'),
-('Automação de RH', '2027-12-05', 'BAIXA', 'PENDENTE'),
-('Chatbot Atendimento', '2026-05-15', 'URGENTE', 'ATRASADO'),
-('API Integração', '2026-06-05', 'MEDIA', 'FEITO'),
-('Data Warehouse', '2027-02-28', 'ALTA', 'PENDENTE'),
-('App de Feedback', '2024-08-10', 'BAIXA', 'PRONTO'),
-('Monitoramento IoT', '2027-11-25', 'URGENTE', 'PENDENTE'),
-('CRM Interno', '2027-12-01', 'MEDIA', 'PENDENTE'),
-('Plataforma EAD', '2027-01-15', 'ALTA', 'PENDENTE');
+INSERT INTO projetos (nome, prazo, importancia, status, gestor_id) VALUES
+('Sistema de BI', '2027-12-31', 'ALTA', 'PENDENTE', 1),
+('Portal de Transparência', '2027-10-15', 'URGENTE', 'PENDENTE', 1),
+('Aplicativo Mobile', '2024-09-30', 'MEDIA', 'PRONTO', 2),
+('Migração de Dados', '2026-08-20', 'ALTA', 'FEITO', 3),
+('Atualização de Segurança', '2027-11-10', 'URGENTE', 'PENDENTE', 4),
+('E-commerce B2B', '2027-01-20', 'ALTA', 'PENDENTE', 5);
 
--- ------------------------------------------------------------
--- 4. Inserir Tarefas (40 tarefas, associadas a projetos e devs)
--- ------------------------------------------------------------
+-- --------------------
+-- 4. Inserir Tarefas
+-- --------------------
 -- Combinação de devs e projetos, com horas estimadas, horas trabalhadas e status variados.
 
 INSERT INTO tarefas (descricao, prazo, nivel_importancia, status, horas_estimadas, horas_trabalhadas, dev_responsavel_id, projeto_id) VALUES
