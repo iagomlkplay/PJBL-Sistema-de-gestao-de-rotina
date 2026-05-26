@@ -51,13 +51,15 @@ CREATE TABLE IF NOT EXISTS relatorios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     data_envio TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     conteudo TEXT NOT NULL,
+    dev_id INT NULL,
     tarefa_id INT NULL,
     projeto_id INT NULL,
+    FOREIGN KEY (dev_id) REFERENCES usuarios(id) ON DELETE SET NULL,
     FOREIGN KEY (tarefa_id) REFERENCES tarefas(id) ON DELETE SET NULL,
     FOREIGN KEY (projeto_id) REFERENCES projetos(id) ON DELETE SET NULL
 );
 
--- Tabela de solicitações de mudança
+-- Tabela de solicitações
 CREATE TABLE IF NOT EXISTS solicitacoes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     justificativa TEXT NOT NULL,
