@@ -576,33 +576,48 @@ public class Dashboard extends JFrame {
         private UsuarioGestor gestor;
         private JTable table;
         private DefaultTableModel model;
+
         public ValidarFinalizacoesPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
             model = new DefaultTableModel(new String[]{"ID", "Descrição", "Responsável", "Status"}, 0);
             table = new JTable(model);
             add(new JScrollPane(table), BorderLayout.CENTER);
-            JButton btnValidar = new JButton("Validar Selecionada");
-            add(btnValidar, BorderLayout.SOUTH);
+
+            JPanel botoes = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+            JButton btnValidar = new JButton("Validar");
             JButton btnRejeitar = new JButton("Rejeitar");
-            add(btnRejeitar, BorderLayout.SOUTH);
-            btnRejeitar.addActionListener(e -> rejeitar());
+            JButton btnRefresh = new JButton("Atualizar");
+            botoes.add(btnValidar);
+            botoes.add(btnRejeitar);
+            botoes.add(btnRefresh);
+            add(botoes, BorderLayout.SOUTH);
+
             refresh();
             btnValidar.addActionListener(e -> validar());
+            btnRejeitar.addActionListener(e -> rejeitar());
+            btnRefresh.addActionListener(e -> refresh());
         }
+
         @Override
         public void refresh() {
             model.setRowCount(0);
             try {
                 for (Tarefa t : Sistema.getInstance().getTarefasDaEquipe(gestor.getId())) {
                     if (t.getStatus() == StatusTarefa.FEITO) {
-                        model.addRow(new Object[]{t.getId(), t.getDescricao(), t.getDevResponsavel().getNome(), t.getStatus()});
+                        model.addRow(new Object[]{
+                                t.getId(),
+                                t.getDescricao(),
+                                t.getDevResponsavel().getNome(),
+                                t.getStatus()
+                        });
                     }
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao carregar: " + ex.getMessage());
             }
         }
+
         private void validar() {
             int linha = table.getSelectedRow();
             if (linha == -1) {
@@ -612,15 +627,20 @@ public class Dashboard extends JFrame {
             int id = (int) model.getValueAt(linha, 0);
             Tarefa tarefa = null;
             try {
-                tarefa = Sistema.getInstance().getTarefas().stream().filter(t -> t.getId() == id).findFirst().orElse(null);
-                if (tarefa != null) {
+                tarefa = Sistema.getInstance().getTarefas().stream()
+                        .filter(t -> t.getId() == id).findFirst().orElse(null);
+                if (tarefa != null && tarefa.getStatus() == StatusTarefa.FEITO) {
                     gestor.validarFinalizacao(tarefa);
                     ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
+                    JOptionPane.showMessageDialog(this, "Tarefa validada como PRONTO.");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Esta tarefa não está com status FEITO.");
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao validar: " + ex.getMessage());
             }
         }
+
         private void rejeitar() {
             int linha = table.getSelectedRow();
             if (linha == -1) {
@@ -628,20 +648,21 @@ public class Dashboard extends JFrame {
                 return;
             }
             int id = (int) model.getValueAt(linha, 0);
-            Tarefa tarefa = Sistema.getInstance().getTarefas().stream()
-                    .filter(t -> t.getId() == id).findFirst().orElse(null);
-            if (tarefa != null && tarefa.getStatus() == StatusTarefa.FEITO) {
-                tarefa.setStatus(StatusTarefa.PENDENTE);
-                try {
+            Tarefa tarefa = null;
+            try {
+                tarefa = Sistema.getInstance().getTarefas().stream()
+                        .filter(t -> t.getId() == id).findFirst().orElse(null);
+                if (tarefa != null && tarefa.getStatus() == StatusTarefa.FEITO) {
+                    tarefa.setStatus(StatusTarefa.PENDENTE);
                     TarefaDAO dao = new TarefaDAO();
                     dao.atualizarStatus(tarefa.getId(), StatusTarefa.PENDENTE);
                     JOptionPane.showMessageDialog(this, "Tarefa rejeitada e retornada para PENDENTE.");
                     ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
-                } catch (SQLException ex) {
-                    JOptionPane.showMessageDialog(this, "Erro ao rejeitar: " + ex.getMessage());
+                } else {
+                    JOptionPane.showMessageDialog(this, "Esta tarefa não está com status FEITO.");
                 }
-            } else {
-                JOptionPane.showMessageDialog(this, "Apenas tarefas com status FEITO podem ser rejeitadas.");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Erro ao rejeitar: " + ex.getMessage());
             }
         }
     }
@@ -845,33 +866,32 @@ public class Dashboard extends JFrame {
     private class RelatorioPanel extends JPanel implements Refreshable {
         private UsuarioGestor gestor;
         private JTextArea textArea;
+        private String ultimoRelatorio = "";
+
         public RelatorioPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
             textArea = new JTextArea();
             textArea.setEditable(false);
+            textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
             add(new JScrollPane(textArea), BorderLayout.CENTER);
             JButton btnGerar = new JButton("Gerar Relatório");
             add(btnGerar, BorderLayout.SOUTH);
             btnGerar.addActionListener(e -> gerar());
+            // Não carrega nada automaticamente
+            textArea.setText("Clique em 'Gerar Relatório' para visualizar.");
         }
+
         @Override
         public void refresh() {
-            try {
-                java.util.List<Relatorio> rels = Sistema.getInstance().getRelatorios();
-                if (!rels.isEmpty()) {
-                    Relatorio ultimo = rels.get(rels.size()-1);
-                    textArea.setText(ultimo.getConteudo());
-                } else {
-                    textArea.setText("Nenhum relatório gerado ainda.");
-                }
-            } catch (Exception ex) {
-                textArea.setText("Erro ao carregar relatório.");
-            }
+            // Mantém o último relatório; não recarrega automaticamente
         }
+
         private void gerar() {
-            Sistema.getInstance().gerarRelatorio();
-            ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
+            ultimoRelatorio = Sistema.getInstance().gerarRelatorio();
+            textArea.setText(ultimoRelatorio);
+            // Opcional: mostrar uma mensagem de confirmação
+            JOptionPane.showMessageDialog(this, "Relatório gerado com sucesso!");
         }
     }
 }
