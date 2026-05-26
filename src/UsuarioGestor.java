@@ -83,7 +83,7 @@ public class UsuarioGestor extends Usuario {
     // RF09: criar projeto
     public void criarProjeto(String nome, Date prazo, NivelImportancia importancia) {
         Sistema sistema = Sistema.getInstance();
-        Projeto projeto = new Projeto(nome, prazo, importancia);
+        Projeto projeto = new Projeto(nome, prazo, importancia, this.getId()); // passa o ID do gestor
         sistema.adicionarProjeto(projeto);
         System.out.println("Projeto criado: " + nome + " (ID " + projeto.getId() + ")");
     }
@@ -184,7 +184,7 @@ public class UsuarioGestor extends Usuario {
                     Projeto projetoPai = tarefa.getProjetoPai();
                     if (projetoPai != null) {
                         List<Tarefa> tarefasDoProjeto = tarefaDAO.listarPorProjeto(projetoPai.getId(), usuarioDAO, projetoDAO);
-                        projetoPai.verificarConclusao(tarefasDoProjeto, tarefaDAO, projetoDAO);
+                        projetoPai.verificarConclusao(tarefasDoProjeto, projetoDAO);
                     }
                 } catch (SQLException e) {
                     System.err.println("Erro ao salvar validação da tarefa: " + e.getMessage());
