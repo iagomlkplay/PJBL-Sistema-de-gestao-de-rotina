@@ -73,11 +73,13 @@ public class UsuarioDev extends Usuario {
     public String visualizarProgressoEquipe() {
         StringBuilder sb = new StringBuilder();
         Sistema sistema = Sistema.getInstance();
-        sb.append("--- Progresso de todos os Desenvolvedores ---\n");
+        sb.append("--- Progresso da equipe ---\n");
         for (UsuarioDev dev : sistema.getDevs()) {
-            double progresso = dev.calcularProgressoTotal();
-            sb.append(dev.getNome()).append(" (ID ").append(dev.getId()).append(") - Progresso geral: ")
-                    .append(String.format("%.1f", progresso)).append("%\n");
+            if (dev.getGestorId() == this.getGestorId()) {
+                double progresso = dev.calcularProgressoTotal();
+                sb.append(dev.getNome()).append(" (ID ").append(dev.getId()).append(") - Progresso geral: ")
+                        .append(String.format("%.1f", progresso)).append("%\n");
+            }
         }
         return sb.toString();
     }
@@ -92,7 +94,7 @@ public class UsuarioDev extends Usuario {
                 .filter(p -> p != null)
                 .distinct()
                 .collect(Collectors.toList());
-        sb.append("--- Projetos ---\n");
+        sb.append("\n--- Projetos ---\n");
         for (Projeto p : projetosColega) {
             // Carregar tarefas do projeto para exibir completo
             try {
@@ -102,7 +104,7 @@ public class UsuarioDev extends Usuario {
                 sb.append(p.getInformacoesDetalhadas()).append(" (erro ao carregar tarefas)\n");
             }
         }
-        sb.append("--- Tarefas ---\n");
+        sb.append("\n--- Tarefas ---\n");
         for (Tarefa t : tarefasColega) {
             sb.append(t.getInformacoesDetalhadas()).append("\n");
         }
