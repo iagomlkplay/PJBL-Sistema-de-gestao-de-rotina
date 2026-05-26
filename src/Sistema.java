@@ -286,7 +286,11 @@ public class Sistema {
     }
 
     // === Relatório ===
-    public void gerarRelatorio() {
+    /*
+    Gera o conteúdo do relatório (sem salvar no banco).
+    @return String com o relatório formatado
+    */
+    public String gerarRelatorio() {
         Date hoje = new Date();
         try {
             List<Tarefa> todasTarefas = getTarefas();
@@ -295,25 +299,22 @@ public class Sistema {
             long relatoriosEnviados = getRelatorios().size();
 
             StringBuilder conteudo = new StringBuilder();
-            conteudo.append("Relatório - ").append(hoje).append("\n");
+            conteudo.append("RELATÓRIO - ").append(hoje).append("\n");
+            conteudo.append("==========================================\n");
             conteudo.append("Tarefas cumpridas (PRONTO): ").append(tarefasCumpridas).append("\n");
             conteudo.append("Tarefas atrasadas: ").append(tarefasAtrasadas).append("\n");
             conteudo.append("Relatórios enviados pelos devs: ").append(relatoriosEnviados).append("\n");
-            conteudo.append("Detalhes dos relatórios dos devs:\n");
-            for (Relatorio r : getRelatorios()) {
+            conteudo.append("\n--- Últimos relatórios dos desenvolvedores ---\n");
+            List<Relatorio> rels = getRelatorios();
+            int max = Math.min(5, rels.size());
+            for (int i = rels.size()-1; i >= rels.size()-max; i--) {
+                Relatorio r = rels.get(i);
                 conteudo.append("- ").append(r.getConteudo()).append("\n");
             }
-
-            Relatorio relatorio = new Relatorio(conteudo.toString());
-            relatorio.setDataEnvio(hoje);
-            relatorioDAO.inserir(relatorio);
-            System.out.println(conteudo.toString());
-
-            for (UsuarioGestor g : getGestores()) {
-                verificarItensFeitoEAtrasados(g);
-            }
+            return conteudo.toString();
         } catch (Exception e) {
             e.printStackTrace();
+            return "Erro ao gerar relatório: " + e.getMessage();
         }
     }
 
