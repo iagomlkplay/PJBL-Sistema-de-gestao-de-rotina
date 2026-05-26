@@ -184,8 +184,8 @@ public class UsuarioGestor extends Usuario {
                 ") com " + horasEstimadas + "h estimadas, atribuída ao dev " + dev.getNome());
     }
 
-    // RF10: processar solicitação de mudança
-    public void processarSolicitacaoMudanca(SolicitacaoMudanca solicitacao, boolean aprovado) {
+    // RF10: processar solicitação
+    public void processarSolicitacao(Solicitacao solicitacao, boolean aprovado) {
         if (solicitacao == null || solicitacao.getStatus() != StatusSolicitacao.PENDENTE) {
             System.out.println("Solicitação inválida ou já processada.");
             return;
@@ -291,9 +291,9 @@ public class UsuarioGestor extends Usuario {
         System.out.println("Tarefa atrasada " + tarefa.getId() + " reatribuída de " + nomeAntigo + " para " + novoDev.getNome());
     }
 
-    public List<SolicitacaoMudanca> listarSolicitacoesPendentes() {
+    public List<Solicitacao> listarSolicitacoesPendentes() {
         Sistema sistema = Sistema.getInstance();
-        List<SolicitacaoMudanca> todas = sistema.getSolicitacoesPorGestor(this.getId());
+        List<Solicitacao> todas = sistema.getSolicitacoesPorGestor(this.getId());
         return todas.stream()
                 .filter(s -> s.getStatus() == StatusSolicitacao.PENDENTE)
                 .collect(Collectors.toList());
@@ -301,12 +301,12 @@ public class UsuarioGestor extends Usuario {
 
     // Método auxiliar para exibir no console (opcional, para compatibilidade)
     public void exibirSolicitacoesPendentes() {
-        List<SolicitacaoMudanca> pendentes = listarSolicitacoesPendentes();
+        List<Solicitacao> pendentes = listarSolicitacoesPendentes();
         if (pendentes.isEmpty()) {
             System.out.println("Não há solicitações pendentes.");
         } else {
             System.out.println("--- Solicitações Pendentes ---");
-            for (SolicitacaoMudanca s : pendentes) {
+            for (Solicitacao s : pendentes) {
                 System.out.println("ID: " + s.getId() + " | De: " + s.getSolicitante().getNome() + " | Justificativa: " + s.getJustificativa());
             }
         }
