@@ -76,6 +76,11 @@ public class Tarefa {
                 id, descricao, prazo, nivelImportancia, status, calcularProgresso(), horasTrabalhadas, horasEstimadas);
     }
 
+    @Override
+    public String toString() {
+        return this.descricao;
+    }
+
     // Getters e Setters
     /* Os métodos setPrazo(), setNivelImportancia(), setHorasEstimadas() e setHorasTrabalhadas() não são realmente necessários.
        A lógica de negócio não altera esses campos após a criação da tarefa (exceto horasTrabalhadas, que é incrementada pelo método adicionarHorasTrabalhadas, não pelo setter).
