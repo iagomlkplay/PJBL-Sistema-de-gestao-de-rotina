@@ -292,8 +292,8 @@ public class Sistema {
         }
     }
 
-    // === Relatório Diário ===
-    public void gerarRelatorioDiario() {
+    // === Relatório ===
+    public void gerarRelatorio() {
         Date hoje = new Date();
         try {
             List<Tarefa> todasTarefas = getTarefas();
@@ -302,7 +302,7 @@ public class Sistema {
             long relatoriosEnviados = getRelatorios().size();
 
             StringBuilder conteudo = new StringBuilder();
-            conteudo.append("Relatório Diário - ").append(hoje).append("\n");
+            conteudo.append("Relatório - ").append(hoje).append("\n");
             conteudo.append("Tarefas cumpridas (PRONTO): ").append(tarefasCumpridas).append("\n");
             conteudo.append("Tarefas atrasadas: ").append(tarefasAtrasadas).append("\n");
             conteudo.append("Relatórios enviados pelos devs: ").append(relatoriosEnviados).append("\n");
@@ -311,9 +311,9 @@ public class Sistema {
                 conteudo.append("- ").append(r.getConteudo()).append("\n");
             }
 
-            Relatorio relatorioDiario = new Relatorio(conteudo.toString());
-            relatorioDiario.setDataEnvio(hoje);
-            relatorioDAO.inserir(relatorioDiario);
+            Relatorio relatorio = new Relatorio(conteudo.toString());
+            relatorio.setDataEnvio(hoje);
+            relatorioDAO.inserir(relatorio);
             System.out.println(conteudo.toString());
 
             for (UsuarioGestor g : getGestores()) {
