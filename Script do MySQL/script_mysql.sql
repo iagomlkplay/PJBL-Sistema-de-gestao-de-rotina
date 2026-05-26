@@ -1,6 +1,6 @@
 -- Deleção e criação do database para testes
 
--- Deleta o banco de dados
+-- Deleta o banco de dados (Para facilitar os testes)
 drop database gestao_rotina;
 
 -- Cria o banco de dados (se não existir)
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     FOREIGN KEY (gestor_id) REFERENCES usuarios(id) ON DELETE SET NULL
 );
 
--- Tabela de projetos (sem dono)
+-- Tabela de projetos
 CREATE TABLE IF NOT EXISTS projetos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
@@ -62,5 +62,7 @@ CREATE TABLE IF NOT EXISTS solicitacoes (
     status ENUM('PENDENTE', 'APROVADA', 'REJEITADA') NOT NULL DEFAULT 'PENDENTE',
     data_criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     dev_solicitante_id INT NOT NULL,
-    FOREIGN KEY (dev_solicitante_id) REFERENCES usuarios(id) ON DELETE CASCADE
+    tarefa_id INT NULL,
+    FOREIGN KEY (dev_solicitante_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (tarefa_id) REFERENCES tarefas(id) ON DELETE SET NULL
 );
