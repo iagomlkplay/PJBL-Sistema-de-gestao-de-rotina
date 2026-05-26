@@ -113,7 +113,7 @@ INSERT INTO tarefas (descricao, prazo, nivel_importancia, status, horas_estimada
 -- ------------------------------------------------------------
 -- 5. Inserir Relatórios (enviados por desenvolvedores)
 -- ------------------------------------------------------------
-INSERT INTO relatorios (data_envio, conteudo, tarefa_id, projeto_id) VALUES
+INSERT INTO relatorios (data_envio, conteudo, dev_id, tarefa_id, projeto_id) VALUES
 (NOW() - INTERVAL 5 DAY, 'Relatório da tarefa de levantamento de requisitos finalizado com sucesso.', (SELECT id FROM tarefas WHERE descricao='Levantamento de requisitos' LIMIT 1), NULL),
 (NOW() - INTERVAL 3 DAY, 'Relatório da tarefa de modelagem do DW: pendente revisão do cliente.', (SELECT id FROM tarefas WHERE descricao='Modelagem do DW' LIMIT 1), NULL),
 (NOW() - INTERVAL 2 DAY, 'Relatório do projeto Sistema de BI – progresso 60%.', NULL, 1),
@@ -126,7 +126,7 @@ INSERT INTO relatorios (data_envio, conteudo, tarefa_id, projeto_id) VALUES
 (NOW() - INTERVAL 12 DAY, 'Relatório de progresso do projeto Aplicativo Mobile – atraso na fase de testes.', NULL, 3);
 
 -- ------------------------------------------------------------
--- 6. Inserir Solicitações de Mudança (vinculadas a tarefas específicas)
+-- 6. Inserir Solicitações (vinculadas a tarefas específicas)
 -- ------------------------------------------------------------
 INSERT INTO solicitacoes (justificativa, status, data_criacao, dev_solicitante_id, tarefa_id) VALUES
 ('Prazo muito curto para conclusão da ETL. Solicito extensão de 10 dias.', 'PENDENTE', NOW() - INTERVAL 2 DAY, (SELECT id FROM usuarios WHERE email='diego.nunes@email.com'), (SELECT id FROM tarefas WHERE descricao='Desenvolvimento ETL' LIMIT 1)),
