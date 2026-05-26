@@ -7,22 +7,25 @@ public class Projeto {
     private Date prazo;
     private NivelImportancia importancia;
     private StatusTarefa status;
+    private int gestorId;           // ID do gestor que criou o projeto
 
     // Construtor para NOVOS projetos (sem id)
-    public Projeto(String nome, Date prazo, NivelImportancia importancia) {
+    public Projeto(String nome, Date prazo, NivelImportancia importancia, int gestorId) {
         this.nome = nome;
         this.prazo = prazo;
         this.importancia = importancia;
         this.status = StatusTarefa.PENDENTE;
+        this.gestorId = gestorId;
     }
 
     // Construtor para leitura do banco (com id e status)
-    public Projeto(int id, String nome, Date prazo, NivelImportancia importancia, StatusTarefa status) {
+    public Projeto(int id, String nome, Date prazo, NivelImportancia importancia, StatusTarefa status, int gestorId) {
         this.id = id;
         this.nome = nome;
         this.prazo = prazo;
         this.importancia = importancia;
         this.status = status;
+        this.gestorId = gestorId;
     }
 
     // Recebe a lista de tarefas do projeto para calcular o progresso
@@ -37,7 +40,7 @@ public class Projeto {
         return soma / tarefasDoProjeto.size();
     }
 
-    // Total de horas - também deve ser obtido via consulta externa
+    // Total de horas
     public double getTotalHorasTrabalhadas(List<Tarefa> tarefasDoProjeto) {
         double total = 0;
         for (Tarefa t : tarefasDoProjeto) total += t.getHorasTrabalhadas();
@@ -50,13 +53,13 @@ public class Projeto {
         return total;
     }
 
-    // Versão simplificada - não exibe progresso nem horas
+    // Versão simplificada
     public String getInformacoesDetalhadas() {
         return String.format("Projeto [ID=%d, Nome=%s, Prazo=%s, Importância=%s, Status=%s]",
                 id, nome, prazo, importancia, status);
     }
 
-    // Método mais completo, que recebe a lista de tarefas
+    // Método completo
     public String getInformacoesDetalhadas(List<Tarefa> tarefasDoProjeto) {
         return String.format("Projeto [ID=%d, Nome=%s, Prazo=%s, Importância=%s, Status=%s, Progresso=%.1f%%, Tarefas=%d, Horas: %.1f/%.1f]",
                 id, nome, prazo, importancia, status, calcularProgresso(tarefasDoProjeto),
@@ -64,8 +67,7 @@ public class Projeto {
     }
 
     // Verifica se todas as tarefas estão PRONTO e atualiza o status do projeto para FEITO
-    // Requer acesso ao DAO para persistir a mudança
-    public void verificarConclusao(List<Tarefa> tarefasDoProjeto, TarefaDAO tarefaDAO, ProjetoDAO projetoDAO) {
+    public void verificarConclusao(List<Tarefa> tarefasDoProjeto, ProjetoDAO projetoDAO) {
         if (this.status == StatusTarefa.PRONTO || this.status == StatusTarefa.FEITO) return;
         boolean todasPronto = true;
         for (Tarefa t : tarefasDoProjeto) {
@@ -86,12 +88,7 @@ public class Projeto {
         }
     }
 
-    @Override
-    public String toString() {
-        return this.nome;
-    }
-
-    // Getters e Setters (sem lista de tarefas)
+    // Getters e Setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     public String getNome() { return nome; }
@@ -102,4 +99,11 @@ public class Projeto {
     public void setImportancia(NivelImportancia importancia) { this.importancia = importancia; }
     public StatusTarefa getStatus() { return status; }
     public void setStatus(StatusTarefa status) { this.status = status; }
+    public int getGestorId() { return gestorId; }
+    public void setGestorId(int gestorId) { this.gestorId = gestorId; }
+
+    @Override
+    public String toString() {
+        return this.nome;
+    }
 }
