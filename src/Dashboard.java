@@ -4,6 +4,9 @@ import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 
 interface Refreshable {
     void refresh();
@@ -57,7 +60,7 @@ public class Dashboard extends JFrame {
             ValidarFinalizacoesPanel p3 = new ValidarFinalizacoesPanel(gestor);
             SolicitacoesPanel p4 = new SolicitacoesPanel(gestor);
             ReatribuirAtrasadasPanel p5 = new ReatribuirAtrasadasPanel(gestor);
-            RelatorioDiarioPanel p6 = new RelatorioDiarioPanel(gestor);
+            RelatorioPanel p6 = new RelatorioPanel(gestor);
             refreshablePanels.add(p1);
             refreshablePanels.add(p2);
             refreshablePanels.add(p3);
@@ -69,7 +72,7 @@ public class Dashboard extends JFrame {
             tabbedPane.addTab("Validar Finalizações", p3);
             tabbedPane.addTab("Solicitações Pendentes", p4);
             tabbedPane.addTab("Reatribuir Atrasadas", p5);
-            tabbedPane.addTab("Relatório Diário", p6);
+            tabbedPane.addTab("Relatório", p6);
         }
 
         add(tabbedPane, BorderLayout.CENTER);
@@ -581,6 +584,9 @@ public class Dashboard extends JFrame {
             add(new JScrollPane(table), BorderLayout.CENTER);
             JButton btnValidar = new JButton("Validar Selecionada");
             add(btnValidar, BorderLayout.SOUTH);
+            JButton btnRejeitar = new JButton("Rejeitar");
+            add(btnRejeitar, BorderLayout.SOUTH);
+            btnRejeitar.addActionListener(e -> rejeitar());
             refresh();
             btnValidar.addActionListener(e -> validar());
         }
@@ -613,6 +619,29 @@ public class Dashboard extends JFrame {
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao validar: " + ex.getMessage());
+            }
+        }
+        private void rejeitar() {
+            int linha = table.getSelectedRow();
+            if (linha == -1) {
+                JOptionPane.showMessageDialog(this, "Selecione uma tarefa.");
+                return;
+            }
+            int id = (int) model.getValueAt(linha, 0);
+            Tarefa tarefa = Sistema.getInstance().getTarefas().stream()
+                    .filter(t -> t.getId() == id).findFirst().orElse(null);
+            if (tarefa != null && tarefa.getStatus() == StatusTarefa.FEITO) {
+                tarefa.setStatus(StatusTarefa.PENDENTE);
+                try {
+                    TarefaDAO dao = new TarefaDAO();
+                    dao.atualizarStatus(tarefa.getId(), StatusTarefa.PENDENTE);
+                    JOptionPane.showMessageDialog(this, "Tarefa rejeitada e retornada para PENDENTE.");
+                    ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
+                } catch (SQLException ex) {
+                    JOptionPane.showMessageDialog(this, "Erro ao rejeitar: " + ex.getMessage());
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Apenas tarefas com status FEITO podem ser rejeitadas.");
             }
         }
     }
@@ -661,29 +690,47 @@ public class Dashboard extends JFrame {
                     break;
                 }
             }
-            if (solicitacao != null) {
-                if (aprovar) {
-                    Tarefa tarefa = solicitacao.getTarefaRelacionada();
-                    if (tarefa != null) {
-                        // Mostrar combo com desenvolvedores da equipe (exceto o solicitante)
-                        JComboBox<UsuarioDev> cbDev = new JComboBox<>();
-                        for (UsuarioDev d : gestor.getEquipe()) {
-                            if (d.getId() != solicitacao.getSolicitante().getId()) {
-                                cbDev.addItem(d);
-                            }
-                        }
-                        int result = JOptionPane.showConfirmDialog(this, cbDev, "Reatribuir tarefa para:", JOptionPane.OK_CANCEL_OPTION);
-                        if (result == JOptionPane.OK_OPTION) {
-                            UsuarioDev novoDev = (UsuarioDev) cbDev.getSelectedItem();
-                            if (novoDev != null) {
-                                gestor.reatribuirTarefaAtrasada(tarefa, novoDev);
-                            }
-                        }
+            if (solicitacao == null) return;
+
+            if (aprovar) {
+                Tarefa tarefa = solicitacao.getTarefaRelacionada();
+                if (tarefa == null) {
+                    JOptionPane.showMessageDialog(this, "Solicitação não está associada a uma tarefa.");
+                    return;
+                }
+                // Diálogo para reatribuir a tarefa
+                JComboBox<UsuarioDev> cbDev = new JComboBox<>();
+                for (UsuarioDev d : gestor.getEquipe()) {
+                    if (d.getId() != solicitacao.getSolicitante().getId()) {
+                        cbDev.addItem(d);
                     }
                 }
-                gestor.processarSolicitacaoMudanca(solicitacao, aprovar);
-                ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
+                if (cbDev.getItemCount() == 0) {
+                    JOptionPane.showMessageDialog(this, "Não há outro desenvolvedor na equipe para reatribuir.");
+                    return;
+                }
+                int result = JOptionPane.showConfirmDialog(this, cbDev,
+                        "Reatribuir tarefa para:", JOptionPane.OK_CANCEL_OPTION);
+                if (result != JOptionPane.OK_OPTION) {
+                    return;
+                }
+                UsuarioDev novoDev = (UsuarioDev) cbDev.getSelectedItem();
+                if (novoDev != null) {
+                    try {
+                        TarefaDAO tarefaDAO = new TarefaDAO();
+                        tarefaDAO.reatribuirDev(tarefa.getId(), novoDev.getId());
+                        tarefa.setDevResponsavel(novoDev);
+                        JOptionPane.showMessageDialog(this, "Tarefa reatribuída com sucesso.");
+                    } catch (SQLException ex) {
+                        JOptionPane.showMessageDialog(this, "Erro ao reatribuir: " + ex.getMessage());
+                        return;
+                    }
+                } else {
+                    return;
+                }
             }
+            gestor.processarSolicitacaoMudanca(solicitacao, aprovar);
+            ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
         }
     }
 
@@ -734,32 +781,77 @@ public class Dashboard extends JFrame {
                 JOptionPane.showMessageDialog(this, "Selecione uma tarefa atrasada.");
                 return;
             }
-            UsuarioDev novoDev = (UsuarioDev) cbNovoDev.getSelectedItem();
-            if (novoDev == null) return;
             int id = (int) model.getValueAt(linha, 0);
             Tarefa tarefa = null;
             try {
-                tarefa = Sistema.getInstance().getTarefas().stream().filter(t -> t.getId() == id).findFirst().orElse(null);
-                if (tarefa != null) {
-                    gestor.reatribuirTarefaAtrasada(tarefa, novoDev);
-                    ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
-                }
+                tarefa = Sistema.getInstance().getTarefas().stream()
+                        .filter(t -> t.getId() == id).findFirst().orElse(null);
+                if (tarefa == null) return;
             } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
+                return;
+            }
+
+            // Selecionar novo desenvolvedor
+            UsuarioDev novoDev = (UsuarioDev) JOptionPane.showInputDialog(this,
+                    "Selecione o novo desenvolvedor responsável:",
+                    "Reatribuir Tarefa",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    gestor.getEquipe().toArray(),
+                    tarefa.getDevResponsavel());
+            if (novoDev == null) return;
+
+            // Novo prazo (opcional)
+            String prazoStr = JOptionPane.showInputDialog(this,
+                    "Novo prazo (dias a partir de hoje) ou deixe em branco para manter o atual:");
+            java.util.Date novoPrazo = null;
+            if (prazoStr != null && !prazoStr.trim().isEmpty()) {
+                try {
+                    int dias = Integer.parseInt(prazoStr.trim());
+                    java.util.Calendar cal = java.util.Calendar.getInstance();
+                    cal.add(java.util.Calendar.DAY_OF_MONTH, dias);
+                    novoPrazo = cal.getTime();
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Número inválido. O prazo não será alterado.");
+                }
+            }
+
+            try {
+                TarefaDAO tarefaDAO = new TarefaDAO();
+                tarefaDAO.reatribuirDev(tarefa.getId(), novoDev.getId());
+                if (novoPrazo != null) {
+                    tarefa.setPrazo(novoPrazo);
+                    String sql = "UPDATE tarefas SET prazo = ? WHERE id = ?";
+                    try (Connection conn = DatabaseConnection.getConnection();
+                         PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        stmt.setDate(1, new java.sql.Date(novoPrazo.getTime()));
+                        stmt.setInt(2, tarefa.getId());
+                        stmt.executeUpdate();
+                    }
+                }
+                // Mudar status para PENDENTE
+                tarefa.setStatus(StatusTarefa.PENDENTE);
+                tarefaDAO.atualizarStatus(tarefa.getId(), StatusTarefa.PENDENTE);
+                tarefa.setDevResponsavel(novoDev);
+                JOptionPane.showMessageDialog(this, "Tarefa reatribuída, prazo atualizado e status alterado para PENDENTE.");
+                ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
+            } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
             }
         }
     }
 
-    private class RelatorioDiarioPanel extends JPanel implements Refreshable {
+    private class RelatorioPanel extends JPanel implements Refreshable {
         private UsuarioGestor gestor;
         private JTextArea textArea;
-        public RelatorioDiarioPanel(UsuarioGestor gestor) {
+        public RelatorioPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
             textArea = new JTextArea();
             textArea.setEditable(false);
             add(new JScrollPane(textArea), BorderLayout.CENTER);
-            JButton btnGerar = new JButton("Gerar Relatório Diário");
+            JButton btnGerar = new JButton("Gerar Relatório");
             add(btnGerar, BorderLayout.SOUTH);
             btnGerar.addActionListener(e -> gerar());
             refresh();
@@ -779,7 +871,7 @@ public class Dashboard extends JFrame {
             }
         }
         private void gerar() {
-            Sistema.getInstance().gerarRelatorioDiario();
+            Sistema.getInstance().gerarRelatorio();
             ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
         }
     }
