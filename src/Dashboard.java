@@ -122,7 +122,7 @@ public class Dashboard extends JFrame {
         public MinhasTarefasPanel(UsuarioDev dev) {
             this.dev = dev;
             setLayout(new BorderLayout());
-            model = new DefaultTableModel(new String[]{"ID", "Descrição", "Prazo", "Status", "Progresso", "Horas (Trab/Esim)"}, 0);
+            model = new DefaultTableModel(new String[]{"ID", "Descrição", "Prazo", "Status", "Progresso", "Horas (Trab/Estim)"}, 0);
             table = new JTable(model);
             table.setDefaultRenderer(Integer.class, new ProgressBarRenderer());
             add(new JScrollPane(table), BorderLayout.CENTER);
