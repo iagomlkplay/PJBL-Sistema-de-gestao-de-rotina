@@ -6,10 +6,12 @@ public class Relatorio {
     private String conteudo;
     private Tarefa tarefaRelacionada;
     private Projeto projetoRelacionado;
+    private UsuarioDev devRemetente;
 
-    public Relatorio(String conteudo) {
+    public Relatorio(String conteudo, UsuarioDev devRemetente) {
         this.conteudo = conteudo;
         this.dataEnvio = new Date();
+        this.devRemetente = devRemetente;
     }
 
     // Getters e Setters
@@ -26,4 +28,6 @@ public class Relatorio {
     public void setTarefaRelacionada(Tarefa tarefaRelacionada) { this.tarefaRelacionada = tarefaRelacionada; }
     public Projeto getProjetoRelacionado() { return projetoRelacionado; }
     public void setProjetoRelacionado(Projeto projetoRelacionado) { this.projetoRelacionado = projetoRelacionado; }
+    public UsuarioDev getDevRemetente() { return devRemetente; }
+    public void setDevRemetente(UsuarioDev devRemetente) { this.devRemetente = devRemetente; }
 }
