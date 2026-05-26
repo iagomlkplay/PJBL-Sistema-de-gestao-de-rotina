@@ -113,17 +113,122 @@ INSERT INTO tarefas (descricao, prazo, nivel_importancia, status, horas_estimada
 -- ------------------------------------------------------------
 -- 5. Inserir Relatórios (enviados por desenvolvedores)
 -- ------------------------------------------------------------
-INSERT INTO relatorios (data_envio, conteudo, dev_id, tarefa_id, projeto_id) VALUES
-(NOW() - INTERVAL 5 DAY, 'Relatório da tarefa de levantamento de requisitos finalizado com sucesso.', (SELECT id FROM tarefas WHERE descricao='Levantamento de requisitos' LIMIT 1), NULL),
-(NOW() - INTERVAL 3 DAY, 'Relatório da tarefa de modelagem do DW: pendente revisão do cliente.', (SELECT id FROM tarefas WHERE descricao='Modelagem do DW' LIMIT 1), NULL),
-(NOW() - INTERVAL 2 DAY, 'Relatório do projeto Sistema de BI – progresso 60%.', NULL, 1),
-(NOW() - INTERVAL 1 DAY, 'Tarefa de prototipação concluída. Próxima fase: desenvolvimento.', (SELECT id FROM tarefas WHERE descricao='Prototipação' LIMIT 1), NULL),
-(NOW(), 'Relatório final do projeto Portal de Transparência – entregue com atraso.', NULL, 2),
-(NOW() - INTERVAL 4 DAY, 'Atualização de segurança: análise de vulnerabilidades em andamento.', (SELECT id FROM tarefas WHERE descricao='Análise de vulnerabilidades' LIMIT 1), NULL),
-(NOW() - INTERVAL 6 DAY, 'Correção de bug crítico aplicada em produção.', (SELECT id FROM tarefas WHERE descricao='Correção de bug crítico' LIMIT 1), NULL),
-(NOW() - INTERVAL 7 DAY, 'Documentação técnica entregue para o cliente.', (SELECT id FROM tarefas WHERE descricao='Documentação técnica' LIMIT 1), NULL),
-(NOW() - INTERVAL 10 DAY, 'Treinamento da equipe agendado para próxima semana.', (SELECT id FROM tarefas WHERE descricao='Treinamento da equipe' LIMIT 1), NULL),
-(NOW() - INTERVAL 12 DAY, 'Relatório de progresso do projeto Aplicativo Mobile – atraso na fase de testes.', NULL, 3);
+
+INSERT INTO relatorios (data_envio, conteudo, tarefa_id, projeto_id, dev_id) VALUES
+
+-- Relatórios do gestor 1 (Ana Silva) – devs Bruno, Carla, Diego, Elaine, Fabio
+(NOW() - INTERVAL 5 DAY, 'Relatório final do levantamento de requisitos. Documentação aprovada pelo cliente.', 
+ (SELECT id FROM tarefas WHERE descricao='Levantamento de requisitos' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='bruno.alves@email.com')),
+
+(NOW() - INTERVAL 3 DAY, 'Modelagem do DW concluída com 96% de aproveitamento. Pendente ajustes no particionamento.', 
+ (SELECT id FROM tarefas WHERE descricao='Modelagem do DW' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='carla.dias@email.com')),
+
+(NOW() - INTERVAL 1 DAY, 'Desenvolvimento ETL: 50% concluído. Dificuldade com fonte de dados legada.', 
+ (SELECT id FROM tarefas WHERE descricao='Desenvolvimento ETL' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='diego.nunes@email.com')),
+
+(NOW() - INTERVAL 2 DAY, 'Criação de dashboards: protótipo inicial pronto. Aguardando feedback dos usuários.', 
+ (SELECT id FROM tarefas WHERE descricao='Criação de dashboards' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='elaine.rocha@email.com')),
+
+(NOW() - INTERVAL 7 DAY, 'Backend APIs: 85% dos endpoints implementados. Documentação Swagger anexada.', 
+ (SELECT id FROM tarefas WHERE descricao='Backend APIs' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='fabio.torres@email.com')),
+
+(NOW() - INTERVAL 4 DAY, 'Testes de segurança: plano de testes elaborado. Ferramenta configurada.', 
+ (SELECT id FROM tarefas WHERE descricao='Testes de segurança' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='carla.dias@email.com')),
+
+-- Relatórios do gestor 2 (Carlos Souza) – devs Gabriela, Henrique, Igor, Jessica
+(NOW() - INTERVAL 6 DAY, 'Prototipação do aplicativo finalizada e validada com stakeholders.', 
+ (SELECT id FROM tarefas WHERE descricao='Prototipação' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='gabriela.freitas@email.com')),
+
+(NOW() - INTERVAL 10 DAY, 'Desenvolvimento iOS: código entregue para revisão. Próximo passo: testes beta.', 
+ (SELECT id FROM tarefas WHERE descricao='Desenvolvimento iOS' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='henrique.brito@email.com')),
+
+(NOW() - INTERVAL 2 DAY, 'Testes beta: 90% dos casos aprovados. Bugs críticos corrigidos.', 
+ (SELECT id FROM tarefas WHERE descricao='Testes beta' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='igor.campos@email.com')),
+
+(NOW() - INTERVAL 1 DAY, 'Relatório de progresso do projeto Aplicativo Mobile – fase de testes concluída.', 
+ NULL, (SELECT id FROM projetos WHERE nome='Aplicativo Mobile' LIMIT 1), 
+ (SELECT id FROM usuarios WHERE email='gabriela.freitas@email.com')),
+
+-- Relatórios do gestor 3 (Fernanda Lima) – devs Leonardo, Mariana, Natalia, Otavio
+(NOW() - INTERVAL 8 DAY, 'Planejamento da migração de dados finalizado. Cronograma aprovado.', 
+ (SELECT id FROM tarefas WHERE descricao='Planejamento' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='leonardo.monteiro@email.com')),
+
+(NOW() - INTERVAL 4 DAY, 'Execução da migração: 100% dos dados migrados. Validação em andamento.', 
+ (SELECT id FROM tarefas WHERE descricao='Execução migração' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='mariana.ribeiro@email.com')),
+
+(NOW() - INTERVAL 3 DAY, 'Validação pós-migração: consistência de dados verificada. Relatório final anexado.', 
+ (SELECT id FROM tarefas WHERE descricao='Validação pós-migração' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='natalia.castro@email.com')),
+
+(NOW() - INTERVAL 12 DAY, 'Otimização de consultas: análise de índices concluída. Melhorias de 30% na performance.', 
+ (SELECT id FROM tarefas WHERE descricao='Otimização de consultas' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='leonardo.monteiro@email.com')),
+
+-- Relatórios do gestor 4 (Ricardo Mendes) – devs Patricia, Rafael, Sabrina, Thiago
+(NOW() - INTERVAL 5 DAY, 'Análise de vulnerabilidades: relatório de riscos entregue. Classificação crítica/média/baixa.', 
+ (SELECT id FROM tarefas WHERE descricao='Análise de vulnerabilidades' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='patricia.ferreira@email.com')),
+
+(NOW() - INTERVAL 2 DAY, 'Aplicação de patches: 40% dos servidores atualizados. Agendado reboot noturno.', 
+ (SELECT id FROM tarefas WHERE descricao='Aplicação de patches' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='rafael.oliveira@email.com')),
+
+(NOW() - INTERVAL 1 DAY, 'Teste de penetração: em andamento. Primeiros achados reportados.', 
+ (SELECT id FROM tarefas WHERE descricao='Teste de penetração' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='sabrina.cardoso@email.com')),
+
+(NOW() - INTERVAL 14 DAY, 'Configuração de servidor: ambiente de homologação pronto. Documentação atualizada.', 
+ (SELECT id FROM tarefas WHERE descricao='Configuração de servidor' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='patricia.ferreira@email.com')),
+
+-- Relatórios do gestor 5 (Juliana Costa) – devs Vanessa, Wagner, Yara
+(NOW() - INTERVAL 6 DAY, 'Configuração de catálogo: produtos importados. Preços revisados.', 
+ (SELECT id FROM tarefas WHERE descricao='Configuração de catálogo' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='vanessa.souza@email.com')),
+
+(NOW() - INTERVAL 4 DAY, 'Integração de pagamentos: gateway configurado. Testes sandbox aprovados.', 
+ (SELECT id FROM tarefas WHERE descricao='Integração de pagamentos' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='wagner.lima@email.com')),
+
+(NOW() - INTERVAL 1 DAY, 'Testes de carga: cenários de pico simulados. Servidor respondeu adequadamente.', 
+ (SELECT id FROM tarefas WHERE descricao='Testes de carga' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='yara.nunes@email.com')),
+
+(NOW() - INTERVAL 9 DAY, 'Revisão de código: análise estática concluída. 10 pontos de melhoria identificados.', 
+ (SELECT id FROM tarefas WHERE descricao='Revisão de código' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='vanessa.souza@email.com')),
+
+(NOW() - INTERVAL 11 DAY, 'Elaboração de relatórios: modelos criados no Power BI. Aguardando dados de produção.', 
+ (SELECT id FROM tarefas WHERE descricao='Elaboração de relatórios' LIMIT 1), NULL, 
+ (SELECT id FROM usuarios WHERE email='igor.campos@email.com')),
+
+-- Relatórios sobre projetos (sem tarefa específica)
+(NOW() - INTERVAL 3 DAY, 'Relatório de progresso do projeto Sistema de BI – primeiros dashboards entregues.', 
+ NULL, (SELECT id FROM projetos WHERE nome='Sistema de BI' LIMIT 1), 
+ (SELECT id FROM usuarios WHERE email='bruno.alves@email.com')),
+
+(NOW() - INTERVAL 7 DAY, 'Relatório final do projeto Portal de Transparência – entregue com atraso devido a requisitos.', 
+ NULL, (SELECT id FROM projetos WHERE nome='Portal de Transparência' LIMIT 1), 
+ (SELECT id FROM usuarios WHERE email='fabio.torres@email.com')),
+
+(NOW() - INTERVAL 15 DAY, 'Atualização de segurança: relatório de vulnerabilidades corrigidas.', 
+ NULL, (SELECT id FROM projetos WHERE nome='Atualização de Segurança' LIMIT 1), 
+ (SELECT id FROM usuarios WHERE email='patricia.ferreira@email.com')),
+
+(NOW() - INTERVAL 2 DAY, 'E-commerce B2B: integração com ERP concluída. Testes funcionais em andamento.', 
+ NULL, (SELECT id FROM projetos WHERE nome='E-commerce B2B' LIMIT 1), 
+ (SELECT id FROM usuarios WHERE email='vanessa.souza@email.com'));
 
 -- ------------------------------------------------------------
 -- 6. Inserir Solicitações (vinculadas a tarefas específicas)
