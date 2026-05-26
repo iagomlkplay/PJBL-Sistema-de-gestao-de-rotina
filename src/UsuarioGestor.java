@@ -273,6 +273,7 @@ public class UsuarioGestor extends Usuario {
         return this.getNome(); // Exibe o nome do gestor no combo de cadastro
     }
 
+    // Getters e setters
     public String getDepartamento() { return departamento; }
 
     // setDepartamento() não é usado porque o departamento é definido no construtor e nunca alterado. Pode ser removido.
