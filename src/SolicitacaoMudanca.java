@@ -6,12 +6,14 @@ public class SolicitacaoMudanca {
     private StatusSolicitacao status;
     private Date dataCriacao;
     private UsuarioDev solicitante;
+    private Tarefa tarefaRelacionada;  // nova referência
 
-    public SolicitacaoMudanca(String justificativa, UsuarioDev solicitante) {
+    public SolicitacaoMudanca(String justificativa, UsuarioDev solicitante, Tarefa tarefaRelacionada) {
         this.justificativa = justificativa;
         this.status = StatusSolicitacao.PENDENTE;
         this.dataCriacao = new Date();
         this.solicitante = solicitante;
+        this.tarefaRelacionada = tarefaRelacionada;
     }
 
     // Getters e Setters
@@ -30,4 +32,7 @@ public class SolicitacaoMudanca {
 
     // Solicitante é definida no construtor e nunca alterada. Também não precisa realmente existir.
     public void setSolicitante(UsuarioDev solicitante) { this.solicitante = solicitante; }
+
+    public Tarefa getTarefaRelacionada() { return tarefaRelacionada; }
+    public void setTarefaRelacionada(Tarefa tarefaRelacionada) { this.tarefaRelacionada = tarefaRelacionada; }
 }
