@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS projetos (
     nome VARCHAR(100) NOT NULL,
     prazo DATE NOT NULL,
     importancia ENUM('BAIXA', 'MEDIA', 'ALTA', 'URGENTE') NOT NULL,
-    status ENUM('PENDENTE', 'FEITO', 'PRONTO', 'ATRASADO') NOT NULL DEFAULT 'PENDENTE'
+    status ENUM('PENDENTE', 'FEITO', 'PRONTO', 'ATRASADO') NOT NULL DEFAULT 'PENDENTE',
+    gestor_id INT NULL,
+    FOREIGN KEY (gestor_id) REFERENCES usuarios(id) ON DELETE SET NULL
 );
 
 -- Tabela de tarefas
