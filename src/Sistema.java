@@ -304,16 +304,7 @@ public class Sistema {
 
             // Relatórios enviados pelos devs da equipe
             List<Relatorio> relatoriosEquipe = getRelatorios().stream()
-                    .filter(r -> {
-                        Tarefa tarefa = r.getTarefaRelacionada();
-                        if (tarefa != null && devIds.contains(tarefa.getDevResponsavel().getId())) return true;
-                        Projeto projeto = r.getProjetoRelacionado();
-                        if (projeto != null) {
-                            // Verifica se o projeto tem alguma tarefa de um dev da equipe
-                            return tarefasEquipe.stream().anyMatch(t -> t.getProjetoPai() != null && t.getProjetoPai().getId() == projeto.getId());
-                        }
-                        return false;
-                    })
+                    .filter(r -> devIds.contains(r.getDevRemetente().getId()))
                     .collect(Collectors.toList());
 
             StringBuilder sb = new StringBuilder();
@@ -331,7 +322,8 @@ public class Sistema {
                 sb.append("Nenhum relatório enviado ainda.\n");
             } else {
                 for (Relatorio r : relatoriosEquipe) {
-                    sb.append("\nEnviado em: ").append(new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(r.getDataEnvio())).append("\n");
+                    sb.append("\nDesenvolvedor: ").append(r.getDevRemetente().getNome()).append("\n");
+                    sb.append("Enviado em: ").append(new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(r.getDataEnvio())).append("\n");
                     if (r.getTarefaRelacionada() != null) {
                         sb.append("Tarefa: ").append(r.getTarefaRelacionada().getDescricao())
                                 .append(" (ID ").append(r.getTarefaRelacionada().getId()).append(")\n");
