@@ -78,7 +78,7 @@ public class Sistema {
         }
     }
 
-    public void adicionarSolicitacao(SolicitacaoMudanca s) {
+    public void adicionarSolicitacao(Solicitacao s) {
         try {
             solicitacaoDAO.inserir(s);
         } catch (Exception e) {
@@ -181,7 +181,7 @@ public class Sistema {
         }
     }
 
-    public List<SolicitacaoMudanca> getSolicitacoes() {
+    public List<Solicitacao> getSolicitacoes() {
         try {
             return solicitacaoDAO.listarTodos();
         } catch (Exception e) {
@@ -191,7 +191,7 @@ public class Sistema {
     }
 
     // === Solicitações por gestor ===
-    public List<SolicitacaoMudanca> getSolicitacoesPorGestor(int gestorId) {
+    public List<Solicitacao> getSolicitacoesPorGestor(int gestorId) {
         try {
             return solicitacaoDAO.listarPorGestor(gestorId);
         } catch (Exception e) {
@@ -286,32 +286,64 @@ public class Sistema {
     }
 
     // === Relatório ===
-    /*
-    Gera o conteúdo do relatório (sem salvar no banco).
-    @return String com o relatório formatado
-    */
-    public String gerarRelatorio() {
-        Date hoje = new Date();
-        try {
-            List<Tarefa> todasTarefas = getTarefas();
-            long tarefasCumpridas = todasTarefas.stream().filter(t -> t.getStatus() == StatusTarefa.PRONTO).count();
-            long tarefasAtrasadas = todasTarefas.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
-            long relatoriosEnviados = getRelatorios().size();
 
-            StringBuilder conteudo = new StringBuilder();
-            conteudo.append("RELATÓRIO - ").append(hoje).append("\n");
-            conteudo.append("==========================================\n");
-            conteudo.append("Tarefas cumpridas (PRONTO): ").append(tarefasCumpridas).append("\n");
-            conteudo.append("Tarefas atrasadas: ").append(tarefasAtrasadas).append("\n");
-            conteudo.append("Relatórios enviados pelos devs: ").append(relatoriosEnviados).append("\n");
-            conteudo.append("\n--- Últimos relatórios dos desenvolvedores ---\n");
-            List<Relatorio> rels = getRelatorios();
-            int max = Math.min(5, rels.size());
-            for (int i = rels.size()-1; i >= rels.size()-max; i--) {
-                Relatorio r = rels.get(i);
-                conteudo.append("- ").append(r.getConteudo()).append("\n");
+    public String gerarRelatorioEquipe(int gestorId) {
+        try {
+            List<UsuarioDev> equipe = usuarioDAO.listarDevsPorGestor(gestorId);
+            Set<Integer> devIds = equipe.stream().map(UsuarioDev::getId).collect(Collectors.toSet());
+
+            // Tarefas da equipe
+            List<Tarefa> tarefasEquipe = getTarefas().stream()
+                    .filter(t -> devIds.contains(t.getDevResponsavel().getId()))
+                    .collect(Collectors.toList());
+
+            long tarefasCumpridas = tarefasEquipe.stream()
+                    .filter(t -> t.getStatus() == StatusTarefa.PRONTO).count();
+            long tarefasAtrasadas = tarefasEquipe.stream()
+                    .filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
+
+            // Relatórios enviados pelos devs da equipe
+            List<Relatorio> relatoriosEquipe = getRelatorios().stream()
+                    .filter(r -> {
+                        Tarefa tarefa = r.getTarefaRelacionada();
+                        if (tarefa != null && devIds.contains(tarefa.getDevResponsavel().getId())) return true;
+                        Projeto projeto = r.getProjetoRelacionado();
+                        if (projeto != null) {
+                            // Verifica se o projeto tem alguma tarefa de um dev da equipe
+                            return tarefasEquipe.stream().anyMatch(t -> t.getProjetoPai() != null && t.getProjetoPai().getId() == projeto.getId());
+                        }
+                        return false;
+                    })
+                    .collect(Collectors.toList());
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("RELATÓRIO - ").append(new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date())).append("\n");
+            sb.append("========================================================\n\n");
+            sb.append("RESUMO DA EQUIPE\n");
+            sb.append("--------------------------------------------------------\n");
+            sb.append("Tarefas cumpridas (PRONTO): ").append(tarefasCumpridas).append("\n");
+            sb.append("Tarefas atrasadas: ").append(tarefasAtrasadas).append("\n");
+            sb.append("Relatórios enviados pelos devs: ").append(relatoriosEquipe.size()).append("\n\n");
+
+            sb.append("RELATÓRIOS DOS DESENVOLVEDORES\n");
+            sb.append("========================================================\n");
+            if (relatoriosEquipe.isEmpty()) {
+                sb.append("Nenhum relatório enviado ainda.\n");
+            } else {
+                for (Relatorio r : relatoriosEquipe) {
+                    sb.append("\nEnviado em: ").append(new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(r.getDataEnvio())).append("\n");
+                    if (r.getTarefaRelacionada() != null) {
+                        sb.append("Tarefa: ").append(r.getTarefaRelacionada().getDescricao())
+                                .append(" (ID ").append(r.getTarefaRelacionada().getId()).append(")\n");
+                    } else if (r.getProjetoRelacionado() != null) {
+                        sb.append("Projeto: ").append(r.getProjetoRelacionado().getNome())
+                                .append(" (ID ").append(r.getProjetoRelacionado().getId()).append(")\n");
+                    }
+                    sb.append("Conteúdo: ").append(r.getConteudo()).append("\n");
+                    sb.append("--------------------------------------------------------\n");
+                }
             }
-            return conteudo.toString();
+            return sb.toString();
         } catch (Exception e) {
             e.printStackTrace();
             return "Erro ao gerar relatório: " + e.getMessage();
