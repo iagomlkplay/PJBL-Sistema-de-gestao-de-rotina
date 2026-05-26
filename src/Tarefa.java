@@ -82,25 +82,26 @@ public class Tarefa {
     }
 
     // Getters e Setters
-    /* Os métodos setPrazo(), setNivelImportancia(), setHorasEstimadas() e setHorasTrabalhadas() não são realmente necessários.
-       A lógica de negócio não altera esses campos após a criação da tarefa (exceto horasTrabalhadas, que é incrementada pelo método adicionarHorasTrabalhadas, não pelo setter).
-    */
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
+
     public String getDescricao() { return descricao; }
-    public void setDescricao(String descricao) { this.descricao = descricao; }
+
     public Date getPrazo() { return prazo; }
     public void setPrazo(Date prazo) { this.prazo = prazo; }
+
     public NivelImportancia getNivelImportancia() { return nivelImportancia; }
-    public void setNivelImportancia(NivelImportancia nivelImportancia) { this.nivelImportancia = nivelImportancia; }
+
     public StatusTarefa getStatus() { return status; }
     public void setStatus(StatusTarefa status) { this.status = status; }
+
     public UsuarioDev getDevResponsavel() { return devResponsavel; }
     public void setDevResponsavel(UsuarioDev devResponsavel) { this.devResponsavel = devResponsavel; }
+
     public double getHorasEstimadas() { return horasEstimadas; }
-    public void setHorasEstimadas(double horasEstimadas) { this.horasEstimadas = horasEstimadas; }
+
     public double getHorasTrabalhadas() { return horasTrabalhadas; }
-    public void setHorasTrabalhadas(double horasTrabalhadas) { this.horasTrabalhadas = horasTrabalhadas; }
+
     public Projeto getProjetoPai() { return projetoPai; }
     public void setProjetoPai(Projeto projetoPai) { this.projetoPai = projetoPai; }
 }

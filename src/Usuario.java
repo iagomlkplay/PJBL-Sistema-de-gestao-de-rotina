@@ -31,17 +31,11 @@ public abstract class Usuario {
     public void setNome(String nome) { this.nome = nome; }
 
     public String getCpf() { return cpf; }
-    /*Implementar método para uma possível funcionalidade de edição de perfil
-    public void setCpf(String cpf) { this.cpf = cpf; }
-    */
+
     public String getEmail() { return email; }
-    /*Implementar método para uma possível funcionalidade de edição de perfil
-    public void setEmail(String email) { this.email = email; }
-    */
+
     public String getSenha() { return senha; }
-    /*Implementar método para uma possível funcionalidade de edição de perfil
-    public void setSenha(String senha) { this.senha = senha; }
-    */
+
     public TipoUsuario getTipoUsuario() { return tipoUsuario; }
     public void setTipoUsuario(TipoUsuario tipoUsuario) { this.tipoUsuario = tipoUsuario; }
 }

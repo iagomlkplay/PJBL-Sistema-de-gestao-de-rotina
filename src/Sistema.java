@@ -119,14 +119,6 @@ public class Sistema {
     }
 
     // === Listagens ===
-    public List<Usuario> getUsuarios() {
-        try {
-            return usuarioDAO.listarTodos();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
-    }
 
     public List<UsuarioDev> getDevs() {
         try {

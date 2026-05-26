@@ -91,16 +91,18 @@ public class Projeto {
     // Getters e Setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
+
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
+
     public Date getPrazo() { return prazo; }
-    public void setPrazo(Date prazo) { this.prazo = prazo; }
+
     public NivelImportancia getImportancia() { return importancia; }
-    public void setImportancia(NivelImportancia importancia) { this.importancia = importancia; }
+
     public StatusTarefa getStatus() { return status; }
     public void setStatus(StatusTarefa status) { this.status = status; }
+
     public int getGestorId() { return gestorId; }
-    public void setGestorId(int gestorId) { this.gestorId = gestorId; }
 
     @Override
     public String toString() {

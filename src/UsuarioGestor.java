@@ -268,48 +268,12 @@ public class UsuarioGestor extends Usuario {
         }
     }
 
-    // RF12: reatribuir tarefa atrasada
-    public void reatribuirTarefaAtrasada(Tarefa tarefa, UsuarioDev novoDev) {
-        if (tarefa.getStatus() != StatusTarefa.ATRASADO) {
-            System.out.println("Esta tarefa não está atrasada (status: " + tarefa.getStatus() + ")");
-            return;
-        }
-        List<UsuarioDev> equipe = getEquipe();
-        if (equipe.stream().noneMatch(d -> d.getId() == tarefa.getDevResponsavel().getId()) ||
-                equipe.stream().noneMatch(d -> d.getId() == novoDev.getId())) {
-            System.out.println("O dev antigo ou o novo dev não pertencem à sua equipe.");
-            return;
-        }
-        String nomeAntigo = tarefa.getDevResponsavel().getNome();
-        try {
-            tarefaDAO.reatribuirDev(tarefa.getId(), novoDev.getId());
-        } catch (SQLException e) {
-            System.err.println("Erro ao reatribuir tarefa: " + e.getMessage());
-            return;
-        }
-        tarefa.setDevResponsavel(novoDev);
-        System.out.println("Tarefa atrasada " + tarefa.getId() + " reatribuída de " + nomeAntigo + " para " + novoDev.getNome());
-    }
-
     public List<Solicitacao> listarSolicitacoesPendentes() {
         Sistema sistema = Sistema.getInstance();
         List<Solicitacao> todas = sistema.getSolicitacoesPorGestor(this.getId());
         return todas.stream()
                 .filter(s -> s.getStatus() == StatusSolicitacao.PENDENTE)
                 .collect(Collectors.toList());
-    }
-
-    // Método auxiliar para exibir no console (opcional, para compatibilidade)
-    public void exibirSolicitacoesPendentes() {
-        List<Solicitacao> pendentes = listarSolicitacoesPendentes();
-        if (pendentes.isEmpty()) {
-            System.out.println("Não há solicitações pendentes.");
-        } else {
-            System.out.println("--- Solicitações Pendentes ---");
-            for (Solicitacao s : pendentes) {
-                System.out.println("ID: " + s.getId() + " | De: " + s.getSolicitante().getNome() + " | Justificativa: " + s.getJustificativa());
-            }
-        }
     }
 
     @Override
@@ -319,7 +283,4 @@ public class UsuarioGestor extends Usuario {
 
     // Getters e setters
     public String getDepartamento() { return departamento; }
-
-    // setDepartamento() não é usado porque o departamento é definido no construtor e nunca alterado. Pode ser removido.
-    public void setDepartamento(String departamento) { this.departamento = departamento; }
 }

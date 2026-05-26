@@ -4,7 +4,6 @@ import java.util.stream.Collectors;
 import java.sql.SQLException;
 
 public class UsuarioDev extends Usuario {
-    private List<String> especialidades;
     private int gestorId;   // ID do gestor responsável
     private transient TarefaDAO tarefaDAO;
     private transient UsuarioDAO usuarioDAO;
@@ -13,7 +12,6 @@ public class UsuarioDev extends Usuario {
     // Construtor com ID
     public UsuarioDev(int id, String nome, String cpf, String email, String senha) {
         super(id, nome, cpf, email, senha);
-        this.especialidades = new ArrayList<>();
         this.tipoUsuario = TipoUsuario.DEV;
         inicializarDAOs();
     }
@@ -21,7 +19,6 @@ public class UsuarioDev extends Usuario {
     // Construtor sem ID (novo cadastro)
     public UsuarioDev(String nome, String cpf, String email, String senha) {
         super(nome, cpf, email, senha);
-        this.especialidades = new ArrayList<>();
         this.tipoUsuario = TipoUsuario.DEV;
         inicializarDAOs();
     }
@@ -40,33 +37,6 @@ public class UsuarioDev extends Usuario {
             System.err.println("Erro ao carregar tarefas do dev: " + e.getMessage());
             return new ArrayList<>();
         }
-    }
-
-    // RF04: visualizar seus itens (tarefas e projetos em que participa)
-    public String visualizarPropriosProjetosTarefas() {
-        StringBuilder sb = new StringBuilder();
-        List<Tarefa> minhasTarefas = carregarTarefas();
-        List<Projeto> projetosParticipados = minhasTarefas.stream()
-                .map(Tarefa::getProjetoPai)
-                .filter(p -> p != null)
-                .distinct()
-                .collect(Collectors.toList());
-
-        sb.append("--- Projetos em que participo ---\n");
-        for (Projeto p : projetosParticipados) {
-            // Carregar tarefas do projeto para calcular progresso real
-            try {
-                List<Tarefa> tarefasProj = tarefaDAO.listarPorProjeto(p.getId(), usuarioDAO, projetoDAO);
-                sb.append(p.getInformacoesDetalhadas(tarefasProj)).append("\n");
-            } catch (SQLException e) {
-                sb.append(p.getInformacoesDetalhadas()).append(" (erro ao carregar tarefas)\n");
-            }
-        }
-        sb.append("--- Minhas Tarefas ---\n");
-        for (Tarefa t : minhasTarefas) {
-            sb.append(t.getInformacoesDetalhadas()).append("\n");
-        }
-        return sb.toString();
     }
 
     // RF04 (parte de colegas) - mostra todos os devs e seu progresso (baseado em tarefas)
@@ -193,32 +163,12 @@ public class UsuarioDev extends Usuario {
         return soma / minhasTarefas.size();
     }
 
-    /* visualizarTarefasDoProjeto() nunca é chamado, já que acabou que a interface usa outros métodos para exibir tarefas
-    // Visualizar tarefas de um projeto específico (consulta direta ao banco)
-    public void visualizarTarefasDoProjeto(Projeto projeto) {
-        try {
-            List<Tarefa> tarefasProjeto = tarefaDAO.listarPorProjeto(projeto.getId(), usuarioDAO, projetoDAO);
-            System.out.println("=== Tarefas do Projeto: " + projeto.getNome() + " ===");
-            for (Tarefa t : tarefasProjeto) {
-                System.out.println(t.getInformacoesDetalhadas());
-            }
-        } catch (SQLException e) {
-            System.err.println("Erro ao listar tarefas do projeto: " + e.getMessage());
-        }
-    }
-    */
-
     @Override
     public String toString() {
         return this.getNome();
     }
 
     // Getters e setters
-
-    // Métodos do campo de especialidades, pode ser implementado para uma versão futura.
-    public List<String> getEspecialidades() { return especialidades; }
-    public void setEspecialidades(List<String> especialidades) { this.especialidades = especialidades; }
-
     public int getGestorId() { return gestorId; }
     public void setGestorId(int gestorId) { this.gestorId = gestorId; }
 }

@@ -69,17 +69,6 @@ public class UsuarioDAO {
         return devs;
     }
 
-    // Método para uma futura implementação. Por hora, o sistema não permite trocar o gestor de um desenvolvedor após o cadastro.
-    public void atualizarGestorDoDev(int devId, int novoGestorId) throws SQLException {
-        String sql = "UPDATE usuarios SET gestor_id = ? WHERE id = ? AND tipo = 'DEV'";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, novoGestorId);
-            stmt.setInt(2, devId);
-            stmt.executeUpdate();
-        }
-    }
-
     public List<Usuario> listarTodos() throws SQLException {
         List<Usuario> usuarios = new ArrayList<>();
         String sql = "SELECT * FROM usuarios";
@@ -138,35 +127,5 @@ public class UsuarioDAO {
             }
         }
         return null;
-    }
-
-    public void atualizarUsuario(Usuario usuario) throws SQLException {
-        String sql = "UPDATE usuarios SET nome = ?, cpf = ?, email = ?, senha = ?, tipo = ?, departamento = ?, gestor_id = ? WHERE id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, usuario.getNome());
-            stmt.setString(2, usuario.getCpf());
-            stmt.setString(3, usuario.getEmail());
-            stmt.setString(4, usuario.getSenha());
-            stmt.setString(5, usuario.getTipoUsuario().name());
-            if (usuario instanceof UsuarioGestor) {
-                stmt.setString(6, ((UsuarioGestor) usuario).getDepartamento());
-                stmt.setNull(7, Types.INTEGER);
-            } else {
-                stmt.setNull(6, Types.VARCHAR);
-                stmt.setInt(7, ((UsuarioDev) usuario).getGestorId());
-            }
-            stmt.setInt(8, usuario.getId());
-            stmt.executeUpdate();
-        }
-    }
-
-    public void deletar(int id) throws SQLException {
-        String sql = "DELETE FROM usuarios WHERE id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-        }
     }
 }

@@ -75,15 +75,6 @@ public class SolicitacaoDAO {
         return lista;
     }
 
-    public void deletar(int id) throws SQLException {
-        String sql = "DELETE FROM solicitacoes WHERE id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-        }
-    }
-
     public void atualizarStatus(int id, StatusSolicitacao novoStatus) throws SQLException {
         String sql = "UPDATE solicitacoes SET status = ? WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
