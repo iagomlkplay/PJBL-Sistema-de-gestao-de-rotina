@@ -7,6 +7,11 @@ import java.util.List;
 import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Date;
+import java.util.Calendar;
+import javax.swing.border.TitledBorder;
 
 interface Refreshable {
     void refresh();
@@ -122,7 +127,7 @@ public class Dashboard extends JFrame {
         public MinhasTarefasPanel(UsuarioDev dev) {
             this.dev = dev;
             setLayout(new BorderLayout());
-            model = new DefaultTableModel(new String[]{"ID", "Descrição", "Prazo", "Status", "Progresso", "Horas (Trab/Estim)"}, 0);
+            model = new DefaultTableModel(new String[]{"ID", "Descrição", "Nome Projeto/Tarefa Avulsa", "Prazo", "Status", "Progresso", "Horas (Trab/Esim)"}, 0);
             table = new JTable(model);
             table.setDefaultRenderer(Integer.class, new ProgressBarRenderer());
             add(new JScrollPane(table), BorderLayout.CENTER);
@@ -147,9 +152,16 @@ public class Dashboard extends JFrame {
             model.setRowCount(0);
             for (Tarefa t : dev.carregarTarefas()) {
                 int progresso = (int) Math.round(t.calcularProgresso());
+                String nomeProjeto;
+                if (t.getProjetoPai() != null) {
+                    nomeProjeto = t.getProjetoPai().getNome();
+                } else {
+                    nomeProjeto = "Avulsa";
+                }
                 model.addRow(new Object[]{
                         t.getId(),
                         t.getDescricao(),
+                        nomeProjeto,
                         t.getPrazo(),
                         t.getStatus(),
                         progresso,
@@ -236,7 +248,7 @@ public class Dashboard extends JFrame {
         public void refresh() {
             cbColegas.removeAllItems();
             for (UsuarioDev d : Sistema.getInstance().getDevs()) {
-                if (d.getId() != dev.getId()) {
+                if (d.getId() != dev.getId() && d.getGestorId() == dev.getGestorId()) {
                     cbColegas.addItem(d);
                 }
             }
@@ -254,6 +266,7 @@ public class Dashboard extends JFrame {
         private JComboBox<String> tipoItem;
         private JComboBox<Object> itemCombo;
         private JTextArea txtConteudo;
+
         public EnviarRelatorioPanel(UsuarioDev dev) {
             this.dev = dev;
             setLayout(new BorderLayout(10,10));
@@ -275,10 +288,12 @@ public class Dashboard extends JFrame {
             atualizarItens();
             btnEnviar.addActionListener(e -> enviar());
         }
+
         @Override
         public void refresh() {
             atualizarItens();
         }
+
         private void atualizarItens() {
             itemCombo.removeAllItems();
             String tipo = (String) tipoItem.getSelectedItem();
@@ -287,13 +302,19 @@ public class Dashboard extends JFrame {
                     itemCombo.addItem(t);
                 }
             } else {
-                dev.carregarTarefas().stream()
-                        .map(Tarefa::getProjetoPai)
-                        .filter(p -> p != null)
-                        .distinct()
-                        .forEach(itemCombo::addItem);
+                Map<Integer, Projeto> projetosMap = new LinkedHashMap<>();
+                for (Tarefa t : dev.carregarTarefas()) {
+                    Projeto p = t.getProjetoPai();
+                    if (p != null && !projetosMap.containsKey(p.getId())) {
+                        projetosMap.put(p.getId(), p);
+                    }
+                }
+                for (Projeto p : projetosMap.values()) {
+                    itemCombo.addItem(p);
+                }
             }
         }
+
         private void enviar() {
             Object item = itemCombo.getSelectedItem();
             String conteudo = txtConteudo.getText().trim();
@@ -335,18 +356,31 @@ public class Dashboard extends JFrame {
         public void refresh() {
             cbTarefa.removeAllItems();
             for (Tarefa t : dev.carregarTarefas()) {
-                cbTarefa.addItem(t);
+                // Mostra apenas tarefas com status PENDENTE
+                if (t.getStatus() == StatusTarefa.PENDENTE) {
+                    cbTarefa.addItem(t);
+                }
+            }
+            if (cbTarefa.getItemCount() == 0) {
+                cbTarefa.addItem(null); // placeholder
+                cbTarefa.setEnabled(false);
+            } else {
+                cbTarefa.setEnabled(true);
             }
         }
 
         private void solicitar() {
             Tarefa tarefa = (Tarefa) cbTarefa.getSelectedItem();
             String justif = txtJustificativa.getText().trim();
-            if (tarefa == null || justif.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Selecione uma tarefa e digite a justificativa.");
+            if (tarefa == null) {
+                JOptionPane.showMessageDialog(this, "Não há tarefas pendentes para solicitar reorganização.");
                 return;
             }
-            dev.solicitarReorganizacao(tarefa, justif); // precisamos criar este método
+            if (justif.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Digite uma justificativa.");
+                return;
+            }
+            dev.solicitarReorganizacao(tarefa, justif);
             JOptionPane.showMessageDialog(this, "Solicitação enviada ao gestor.");
             txtJustificativa.setText("");
             ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
@@ -380,50 +414,86 @@ public class Dashboard extends JFrame {
         private JComboBox<String> tipoCriacao;
         private JPanel cardPanel;
         private CardLayout cardLayout;
+
         public CriarProjetoTarefaPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
-            setLayout(new BorderLayout());
+            setLayout(new BorderLayout(10, 10));
+            setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+            // Combo de seleção (similar ao tipoItem do EnviarRelatorioPanel)
             tipoCriacao = new JComboBox<>(new String[]{"Projeto", "Tarefa Avulsa", "Tarefa em Projeto"});
-            add(tipoCriacao, BorderLayout.NORTH);
+            JPanel topPanel = new JPanel(new GridLayout(1, 2, 5, 5));
+            topPanel.add(new JLabel("Tipo de criação:"));
+            topPanel.add(tipoCriacao);
+            add(topPanel, BorderLayout.NORTH);
+
             cardLayout = new CardLayout();
             cardPanel = new JPanel(cardLayout);
+            cardPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+
             cardPanel.add(new CriarProjetoPanel(), "Projeto");
             cardPanel.add(new CriarTarefaAvulsaPanel(), "Tarefa Avulsa");
             cardPanel.add(new CriarTarefaEmProjetoPanel(), "Tarefa em Projeto");
+
             add(cardPanel, BorderLayout.CENTER);
+
             tipoCriacao.addActionListener(e -> cardLayout.show(cardPanel, (String) tipoCriacao.getSelectedItem()));
         }
+
         @Override
         public void refresh() {
-            // Atualiza os combos nos painéis filhos
-            Component[] comps = cardPanel.getComponents();
-            for (Component c : comps) {
+            for (Component c : cardPanel.getComponents()) {
                 if (c instanceof Refreshable) {
                     ((Refreshable) c).refresh();
                 }
             }
         }
 
+        // ========== SUBPAINÉIS ESTILIZADOS ==========
+
         private class CriarProjetoPanel extends JPanel implements Refreshable {
             private JTextField txtNome;
             private JSpinner spPrazo;
             private JComboBox<NivelImportancia> cbImportancia;
+
             CriarProjetoPanel() {
-                setLayout(new GridLayout(0,2,5,5));
-                add(new JLabel("Nome:"));
+                setLayout(new BorderLayout(10, 10));
+                setBorder(BorderFactory.createTitledBorder(
+                        BorderFactory.createEmptyBorder(5, 5, 5, 5),
+                        "Novo Projeto",
+                        TitledBorder.LEFT,
+                        TitledBorder.TOP
+                ));
+
+                JPanel formPanel = new JPanel(new GridLayout(0, 2, 10, 10));
+                formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+                formPanel.add(new JLabel("Nome:"));
                 txtNome = new JTextField(20);
-                add(txtNome);
-                add(new JLabel("Prazo (dias a partir de hoje):"));
+                formPanel.add(txtNome);
+
+                formPanel.add(new JLabel("Prazo (dias a partir de hoje):"));
                 spPrazo = new JSpinner(new SpinnerNumberModel(10, 1, 365, 1));
-                add(spPrazo);
-                add(new JLabel("Importância:"));
+                formPanel.add(spPrazo);
+
+                formPanel.add(new JLabel("Importância:"));
                 cbImportancia = new JComboBox<>(NivelImportancia.values());
-                add(cbImportancia);
+                formPanel.add(cbImportancia);
+
+                add(formPanel, BorderLayout.CENTER);
+
                 JButton btnCriar = new JButton("Criar Projeto");
-                add(btnCriar);
+                btnCriar.setPreferredSize(new Dimension(150, 30));
+                JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+                buttonPanel.add(btnCriar);
+                add(buttonPanel, BorderLayout.SOUTH);
+
                 btnCriar.addActionListener(e -> criarProjeto());
             }
-            @Override public void refresh() {}
+
+            @Override
+            public void refresh() {}
+
             private void criarProjeto() {
                 String nome = txtNome.getText().trim();
                 if (nome.isEmpty()) {
@@ -431,9 +501,9 @@ public class Dashboard extends JFrame {
                     return;
                 }
                 int dias = (Integer) spPrazo.getValue();
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.add(java.util.Calendar.DAY_OF_MONTH, dias);
-                java.util.Date prazo = cal.getTime();
+                Calendar cal = Calendar.getInstance();
+                cal.add(Calendar.DAY_OF_MONTH, dias);
+                Date prazo = cal.getTime();
                 NivelImportancia imp = (NivelImportancia) cbImportancia.getSelectedItem();
                 gestor.criarProjeto(nome, prazo, imp);
                 JOptionPane.showMessageDialog(this, "Projeto criado com sucesso!");
@@ -449,28 +519,51 @@ public class Dashboard extends JFrame {
             private JSpinner spPrazo;
             private JComboBox<NivelImportancia> cbImportancia;
             private JSpinner spHoras;
+
             CriarTarefaAvulsaPanel() {
-                setLayout(new GridLayout(0,2,5,5));
-                add(new JLabel("Desenvolvedor:"));
+                setLayout(new BorderLayout(10, 10));
+                setBorder(BorderFactory.createTitledBorder(
+                        BorderFactory.createEmptyBorder(5, 5, 5, 5),
+                        "Nova Tarefa Avulsa",
+                        TitledBorder.LEFT,
+                        TitledBorder.TOP
+                ));
+
+                JPanel formPanel = new JPanel(new GridLayout(0, 2, 10, 10));
+                formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+                formPanel.add(new JLabel("Desenvolvedor:"));
                 cbDev = new JComboBox<>();
-                add(cbDev);
-                add(new JLabel("Descrição:"));
+                formPanel.add(cbDev);
+
+                formPanel.add(new JLabel("Descrição:"));
                 txtDesc = new JTextField(20);
-                add(txtDesc);
-                add(new JLabel("Prazo (dias):"));
+                formPanel.add(txtDesc);
+
+                formPanel.add(new JLabel("Prazo (dias):"));
                 spPrazo = new JSpinner(new SpinnerNumberModel(5, 1, 180, 1));
-                add(spPrazo);
-                add(new JLabel("Importância:"));
+                formPanel.add(spPrazo);
+
+                formPanel.add(new JLabel("Importância:"));
                 cbImportancia = new JComboBox<>(NivelImportancia.values());
-                add(cbImportancia);
-                add(new JLabel("Horas estimadas:"));
+                formPanel.add(cbImportancia);
+
+                formPanel.add(new JLabel("Horas estimadas:"));
                 spHoras = new JSpinner(new SpinnerNumberModel(1.0, 0.5, 100.0, 0.5));
-                add(spHoras);
+                formPanel.add(spHoras);
+
+                add(formPanel, BorderLayout.CENTER);
+
                 JButton btnCriar = new JButton("Criar Tarefa");
-                add(btnCriar);
+                btnCriar.setPreferredSize(new Dimension(150, 30));
+                JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+                buttonPanel.add(btnCriar);
+                add(buttonPanel, BorderLayout.SOUTH);
+
                 refresh();
                 btnCriar.addActionListener(e -> criarTarefa());
             }
+
             @Override
             public void refresh() {
                 cbDev.removeAllItems();
@@ -478,6 +571,7 @@ public class Dashboard extends JFrame {
                     cbDev.addItem(d);
                 }
             }
+
             private void criarTarefa() {
                 UsuarioDev dev = (UsuarioDev) cbDev.getSelectedItem();
                 if (dev == null) {
@@ -490,9 +584,9 @@ public class Dashboard extends JFrame {
                     return;
                 }
                 int dias = (Integer) spPrazo.getValue();
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.add(java.util.Calendar.DAY_OF_MONTH, dias);
-                java.util.Date prazo = cal.getTime();
+                Calendar cal = Calendar.getInstance();
+                cal.add(Calendar.DAY_OF_MONTH, dias);
+                Date prazo = cal.getTime();
                 NivelImportancia imp = (NivelImportancia) cbImportancia.getSelectedItem();
                 double horas = (Double) spHoras.getValue();
                 gestor.criarAtribuirTarefa(desc, prazo, imp, dev.getId(), horas);
@@ -509,31 +603,55 @@ public class Dashboard extends JFrame {
             private JSpinner spPrazo;
             private JComboBox<NivelImportancia> cbImportancia;
             private JSpinner spHoras;
+
             CriarTarefaEmProjetoPanel() {
-                setLayout(new GridLayout(0,2,5,5));
-                add(new JLabel("Desenvolvedor:"));
+                setLayout(new BorderLayout(10, 10));
+                setBorder(BorderFactory.createTitledBorder(
+                        BorderFactory.createEmptyBorder(5, 5, 5, 5),
+                        "Nova Tarefa em Projeto",
+                        TitledBorder.LEFT,
+                        TitledBorder.TOP
+                ));
+
+                JPanel formPanel = new JPanel(new GridLayout(0, 2, 10, 10));
+                formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+                formPanel.add(new JLabel("Desenvolvedor:"));
                 cbDev = new JComboBox<>();
-                add(cbDev);
-                add(new JLabel("Projeto:"));
+                formPanel.add(cbDev);
+
+                formPanel.add(new JLabel("Projeto:"));
                 cbProjeto = new JComboBox<>();
-                add(cbProjeto);
-                add(new JLabel("Descrição:"));
+                formPanel.add(cbProjeto);
+
+                formPanel.add(new JLabel("Descrição:"));
                 txtDesc = new JTextField(20);
-                add(txtDesc);
-                add(new JLabel("Prazo (dias):"));
+                formPanel.add(txtDesc);
+
+                formPanel.add(new JLabel("Prazo (dias):"));
                 spPrazo = new JSpinner(new SpinnerNumberModel(5, 1, 180, 1));
-                add(spPrazo);
-                add(new JLabel("Importância:"));
+                formPanel.add(spPrazo);
+
+                formPanel.add(new JLabel("Importância:"));
                 cbImportancia = new JComboBox<>(NivelImportancia.values());
-                add(cbImportancia);
-                add(new JLabel("Horas estimadas:"));
+                formPanel.add(cbImportancia);
+
+                formPanel.add(new JLabel("Horas estimadas:"));
                 spHoras = new JSpinner(new SpinnerNumberModel(1.0, 0.5, 100.0, 0.5));
-                add(spHoras);
+                formPanel.add(spHoras);
+
+                add(formPanel, BorderLayout.CENTER);
+
                 JButton btnCriar = new JButton("Criar Tarefa");
-                add(btnCriar);
+                btnCriar.setPreferredSize(new Dimension(150, 30));
+                JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+                buttonPanel.add(btnCriar);
+                add(buttonPanel, BorderLayout.SOUTH);
+
                 refresh();
                 btnCriar.addActionListener(e -> criarTarefa());
             }
+
             @Override
             public void refresh() {
                 cbDev.removeAllItems();
@@ -541,11 +659,11 @@ public class Dashboard extends JFrame {
                     cbDev.addItem(d);
                 }
                 cbProjeto.removeAllItems();
-                // FILTRO: apenas projetos da equipe
                 for (Projeto p : Sistema.getInstance().getProjetosDaEquipe(gestor.getId())) {
                     cbProjeto.addItem(p);
                 }
             }
+
             private void criarTarefa() {
                 UsuarioDev dev = (UsuarioDev) cbDev.getSelectedItem();
                 Projeto proj = (Projeto) cbProjeto.getSelectedItem();
@@ -559,9 +677,9 @@ public class Dashboard extends JFrame {
                     return;
                 }
                 int dias = (Integer) spPrazo.getValue();
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.add(java.util.Calendar.DAY_OF_MONTH, dias);
-                java.util.Date prazo = cal.getTime();
+                Calendar cal = Calendar.getInstance();
+                cal.add(Calendar.DAY_OF_MONTH, dias);
+                Date prazo = cal.getTime();
                 NivelImportancia imp = (NivelImportancia) cbImportancia.getSelectedItem();
                 double horas = (Double) spHoras.getValue();
                 gestor.criarAtribuirTarefaEmProjeto(desc, prazo, imp, dev.getId(), proj.getId(), horas);
@@ -693,7 +811,7 @@ public class Dashboard extends JFrame {
         @Override
         public void refresh() {
             model.setRowCount(0);
-            for (SolicitacaoMudanca s : gestor.listarSolicitacoesPendentes()) {
+            for (Solicitacao s : gestor.listarSolicitacoesPendentes()) {
                 model.addRow(new Object[]{s.getId(), s.getSolicitante().getNome(), s.getJustificativa(), s.getStatus()});
             }
         }
@@ -704,8 +822,8 @@ public class Dashboard extends JFrame {
                 return;
             }
             int id = (int) model.getValueAt(linha, 0);
-            SolicitacaoMudanca solicitacao = null;
-            for (SolicitacaoMudanca s : Sistema.getInstance().getSolicitacoes()) {
+            Solicitacao solicitacao = null;
+            for (Solicitacao s : Sistema.getInstance().getSolicitacoes()) {
                 if (s.getId() == id) {
                     solicitacao = s;
                     break;
@@ -750,7 +868,7 @@ public class Dashboard extends JFrame {
                     return;
                 }
             }
-            gestor.processarSolicitacaoMudanca(solicitacao, aprovar);
+            gestor.processarSolicitacao(solicitacao, aprovar);
             ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
         }
     }
@@ -866,7 +984,6 @@ public class Dashboard extends JFrame {
     private class RelatorioPanel extends JPanel implements Refreshable {
         private UsuarioGestor gestor;
         private JTextArea textArea;
-        private String ultimoRelatorio = "";
 
         public RelatorioPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
@@ -875,22 +992,20 @@ public class Dashboard extends JFrame {
             textArea.setEditable(false);
             textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
             add(new JScrollPane(textArea), BorderLayout.CENTER);
-            JButton btnGerar = new JButton("Gerar Relatório");
+            JButton btnGerar = new JButton("Gerar Relatório da Equipe");
             add(btnGerar, BorderLayout.SOUTH);
             btnGerar.addActionListener(e -> gerar());
-            // Não carrega nada automaticamente
-            textArea.setText("Clique em 'Gerar Relatório' para visualizar.");
+            textArea.setText("Clique em 'Gerar Relatório da Equipe' para visualizar.");
         }
 
         @Override
         public void refresh() {
-            // Mantém o último relatório; não recarrega automaticamente
+            // Não recarrega automaticamente
         }
 
         private void gerar() {
-            ultimoRelatorio = Sistema.getInstance().gerarRelatorio();
-            textArea.setText(ultimoRelatorio);
-            // Opcional: mostrar uma mensagem de confirmação
+            String relatorio = Sistema.getInstance().gerarRelatorioEquipe(gestor.getId());
+            textArea.setText(relatorio);
             JOptionPane.showMessageDialog(this, "Relatório gerado com sucesso!");
         }
     }
