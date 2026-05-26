@@ -307,26 +307,43 @@ public class Dashboard extends JFrame {
 
     private class SolicitarReorganizacaoPanel extends JPanel implements Refreshable {
         private UsuarioDev dev;
+        private JComboBox<Tarefa> cbTarefa;
         private JTextArea txtJustificativa;
+
         public SolicitarReorganizacaoPanel(UsuarioDev dev) {
             this.dev = dev;
-            setLayout(new BorderLayout());
+            setLayout(new BorderLayout(10,10));
+            JPanel top = new JPanel(new GridLayout(2,2,5,5));
+            top.add(new JLabel("Tarefa:"));
+            cbTarefa = new JComboBox<>();
+            top.add(cbTarefa);
+            top.add(new JLabel("Justificativa:"));
+            top.add(new JLabel()); // placeholder
+            add(top, BorderLayout.NORTH);
             txtJustificativa = new JTextArea(10,40);
-            add(new JLabel("Justificativa:"), BorderLayout.NORTH);
             add(new JScrollPane(txtJustificativa), BorderLayout.CENTER);
             JButton btnSolicitar = new JButton("Enviar Solicitação");
             add(btnSolicitar, BorderLayout.SOUTH);
+            refresh();
             btnSolicitar.addActionListener(e -> solicitar());
         }
+
         @Override
-        public void refresh() {}
+        public void refresh() {
+            cbTarefa.removeAllItems();
+            for (Tarefa t : dev.carregarTarefas()) {
+                cbTarefa.addItem(t);
+            }
+        }
+
         private void solicitar() {
+            Tarefa tarefa = (Tarefa) cbTarefa.getSelectedItem();
             String justif = txtJustificativa.getText().trim();
-            if (justif.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Digite uma justificativa.");
+            if (tarefa == null || justif.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Selecione uma tarefa e digite a justificativa.");
                 return;
             }
-            dev.solicitarReorganizacao(justif);
+            dev.solicitarReorganizacao(tarefa, justif); // precisamos criar este método
             JOptionPane.showMessageDialog(this, "Solicitação enviada ao gestor.");
             txtJustificativa.setText("");
             ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
@@ -645,6 +662,25 @@ public class Dashboard extends JFrame {
                 }
             }
             if (solicitacao != null) {
+                if (aprovar) {
+                    Tarefa tarefa = solicitacao.getTarefaRelacionada();
+                    if (tarefa != null) {
+                        // Mostrar combo com desenvolvedores da equipe (exceto o solicitante)
+                        JComboBox<UsuarioDev> cbDev = new JComboBox<>();
+                        for (UsuarioDev d : gestor.getEquipe()) {
+                            if (d.getId() != solicitacao.getSolicitante().getId()) {
+                                cbDev.addItem(d);
+                            }
+                        }
+                        int result = JOptionPane.showConfirmDialog(this, cbDev, "Reatribuir tarefa para:", JOptionPane.OK_CANCEL_OPTION);
+                        if (result == JOptionPane.OK_OPTION) {
+                            UsuarioDev novoDev = (UsuarioDev) cbDev.getSelectedItem();
+                            if (novoDev != null) {
+                                gestor.reatribuirTarefaAtrasada(tarefa, novoDev);
+                            }
+                        }
+                    }
+                }
                 gestor.processarSolicitacaoMudanca(solicitacao, aprovar);
                 ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
             }
