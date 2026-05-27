@@ -45,6 +45,7 @@ Implementa os papéis de **Desenvolvedor (DEV)** e **Gestor (GESTOR)** com persi
 
 ### Pré-requisitos do sistema
 
+- Java SE Development Kit 25.0.2
 - Servidor MySQL instalado.
 - Driver JDBC do MySQL.
 
