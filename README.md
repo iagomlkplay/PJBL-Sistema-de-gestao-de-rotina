@@ -1,6 +1,6 @@
 # Sistema de Gestão de Rotina
 
-Sistema completo em **Java** com interface gráfica **Swing** para gerenciar projetos, tarefas, equipes de desenvolvimento e prazos.  
+Sistema desenvolvido em **Java** com interface gráfica **Swing** para gerenciar projetos, tarefas, equipes de desenvolvimento e prazos.  
 Implementa os papéis de **Desenvolvedor (DEV)** e **Gestor (GESTOR)** com persistência em banco de dados **MySQL**, controle de horas trabalhadas, notificações automáticas e geração de relatórios.
 
 ---
