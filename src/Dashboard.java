@@ -101,11 +101,14 @@ public class Dashboard extends JFrame implements NotificacaoListener {
     // Implementação da interface NotificacaoListener
     @Override
     public void onNotificacao(String mensagem, int gestorId, String titulo, int tipoMensagem) {
-        // Apenas exibe se o usuário logado é o gestor destinatário
+        System.out.println("Dashboard.onNotificacao chamado: gestorId=" + gestorId + ", usuarioLogado.getId()=" + usuarioLogado.getId() + ", titulo=" + titulo);
         if (usuarioLogado instanceof UsuarioGestor && usuarioLogado.getId() == gestorId) {
+            System.out.println("Exibindo pop-up para gestor " + usuarioLogado.getNome());
             SwingUtilities.invokeLater(() -> {
                 JOptionPane.showMessageDialog(this, mensagem, titulo, tipoMensagem);
             });
+        } else {
+            System.out.println("Ignorando notificação: gestorId não corresponde.");
         }
     }
 
