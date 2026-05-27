@@ -2,7 +2,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
 import java.sql.SQLException;
 import java.sql.Connection;
@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Date;
+import java.util.Timer;
 import java.util.Calendar;
 import javax.swing.border.TitledBorder;
 
@@ -17,11 +18,14 @@ interface Refreshable {
     void refresh();
 }
 
-public class Dashboard extends JFrame implements NotificacaoListener {
+public class Dashboard extends JFrame {
     private Usuario usuarioLogado;
     private Sistema sistema = Sistema.getInstance();
     private JTabbedPane tabbedPane;
     private List<Refreshable> refreshablePanels = new ArrayList<>();
+    private Timer pollingTimer;
+    private Set<Integer> tarefasNotificadasFeito = new HashSet<>();
+    private Set<Integer> tarefasNotificadasAtrasado = new HashSet<>();
 
     public Dashboard(UsuarioDev dev) {
         this((Usuario) dev);
@@ -79,36 +83,59 @@ public class Dashboard extends JFrame implements NotificacaoListener {
             tabbedPane.addTab("Reatribuir Atrasadas", p5);
             tabbedPane.addTab("Relatório", p6);
 
-            // Registra este dashboard como listener de notificações
-            sistema.addNotificacaoListener(this);
+            // Inicia polling de notificações (sem listeners)
+            iniciarPollingNotificacoes(gestor);
         }
 
         add(tabbedPane, BorderLayout.CENTER);
 
-        sistema.iniciarVerificadorPrazos(60000);
+        sistema.iniciarVerificadorPrazos(500);
 
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
                 sistema.pararVerificadorPrazos();
-                if (usuarioLogado instanceof UsuarioGestor) {
-                    sistema.removeNotificacaoListener(Dashboard.this);
-                }
+                if (pollingTimer != null) pollingTimer.cancel();
             }
         });
     }
 
-    // Implementação da interface NotificacaoListener
-    @Override
-    public void onNotificacao(String mensagem, int gestorId, String titulo, int tipoMensagem) {
-        System.out.println("Dashboard.onNotificacao chamado: gestorId=" + gestorId + ", usuarioLogado.getId()=" + usuarioLogado.getId() + ", titulo=" + titulo);
-        if (usuarioLogado instanceof UsuarioGestor && usuarioLogado.getId() == gestorId) {
-            System.out.println("Exibindo pop-up para gestor " + usuarioLogado.getNome());
-            SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(this, mensagem, titulo, tipoMensagem);
-            });
-        } else {
-            System.out.println("Ignorando notificação: gestorId não corresponde.");
+    // ======================== POLLING DE NOTIFICAÇÕES ========================
+    private void iniciarPollingNotificacoes(UsuarioGestor gestor) {
+        pollingTimer = new Timer(true);
+        pollingTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                verificarNotificacoes(gestor);
+            }
+        }, 5000, 500); // primeira execução após 5 segundos, depois a cada 0.5 segundos
+    }
+
+    private void verificarNotificacoes(UsuarioGestor gestor) {
+        try {
+            List<Tarefa> tarefasEquipe = sistema.getTarefasDaEquipe(gestor.getId());
+            for (Tarefa t : tarefasEquipe) {
+                if (t.getStatus() == StatusTarefa.FEITO && !tarefasNotificadasFeito.contains(t.getId())) {
+                    tarefasNotificadasFeito.add(t.getId());
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(Dashboard.this,
+                                "A tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") foi marcada como FEITO.",
+                                "Tarefa Pronta para Validação",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    });
+                }
+                if (t.getStatus() == StatusTarefa.ATRASADO && !tarefasNotificadasAtrasado.contains(t.getId())) {
+                    tarefasNotificadasAtrasado.add(t.getId());
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(Dashboard.this,
+                                "A tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") expirou e está ATRASADA.",
+                                "Prazo Expirado",
+                                JOptionPane.WARNING_MESSAGE);
+                    });
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -138,7 +165,6 @@ public class Dashboard extends JFrame implements NotificacaoListener {
     }
 
     // ======================== PAINÉIS PARA DESENVOLVEDOR ========================
-
     private class MinhasTarefasPanel extends JPanel implements Refreshable {
         private UsuarioDev dev;
         private JTable table;
@@ -376,13 +402,12 @@ public class Dashboard extends JFrame implements NotificacaoListener {
         public void refresh() {
             cbTarefa.removeAllItems();
             for (Tarefa t : dev.carregarTarefas()) {
-                // Mostra apenas tarefas com status PENDENTE
                 if (t.getStatus() == StatusTarefa.PENDENTE) {
                     cbTarefa.addItem(t);
                 }
             }
             if (cbTarefa.getItemCount() == 0) {
-                cbTarefa.addItem(null); // placeholder
+                cbTarefa.addItem(null);
                 cbTarefa.setEnabled(false);
             } else {
                 cbTarefa.setEnabled(true);
