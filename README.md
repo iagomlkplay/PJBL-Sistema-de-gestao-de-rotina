@@ -71,6 +71,7 @@ Implementa os papéis de **Desenvolvedor (DEV)** e **Gestor (GESTOR)** com persi
 │  
 ├── lib/ # JDBC  
 │ └── mysql-connector-j-9.7.0.jar  
+│  
 └── README.md  
 ```
 
@@ -137,7 +138,7 @@ Centraliza as operações do sistema, integrando os DAOs e controlando verifica�
 - `getDevs()`, `getGestores()`, `getProjetos()`, `getTarefas()`, `getRelatorios()`, `getSolicitacoes()` – listagens completas.
 - `getSolicitacoesPorGestor(int gestorId)` – filtra solicitações dos devs da equipe.
 - `getTarefasDaEquipe(int gestorId)`, `getProjetosDaEquipe(int gestorId)` – tarefas/projetos vinculados aos devs do gestor.
-- `notificarGestorMudancaStatus(Tarefa, UsuarioDev)` – exibe pop‑up para o gestor.
+- `notificarConsoleGestorMudancaStatus(Tarefa, UsuarioDev)` – faz notificação via console para o gestor.
 - `verificarPrazosExpirados()` – percorre tarefas e projetos; os com status PENDENTE e prazo vencido tornam-se ATRASADO (persistido via DAO).
 - `gerarRelatorioEquipe(int gestorId)` – retorna string detalhada com estatísticas e lista de relatórios enviados.
 - `iniciarVerificadorPrazos(long intervalo)` – agenda execução periódica de `verificarPrazosExpirados()`.
@@ -155,7 +156,8 @@ Centraliza as operações do sistema, integrando os DAOs e controlando verifica�
 - `LoginScreen` – tela de autenticação e cadastro de novos usuários (com máscara para CPF e campos condicionais para gestor/desenvolvedor).
 - `Dashboard` – janela principal com abas (JTabbedPane). O conteúdo das abas é diferente para `UsuarioDev` e `UsuarioGestor`.
     - Painéis implementam a interface `Refreshable` para atualizar dados após ações.
-    - Inclui funcionalidades como: adicionar horas, alterar status, validar tarefas, reatribuir tarefas atrasadas, gerenciar solicitações, gerar relatório, etc.
+    - Inclui funcionalidades como: adicionar horas, alterar status, validar tarefas, reatribuir tarefas atrasadas, gerenciar solicitações, gerar relatório, verificar notificações, etc.
+    - Utiliza-se de um mecanismo de pooling em `verificarNotificacoes` para notificações pop-up.
 - `Main` – ponto de entrada; abre ` LoginScreen`.
 
 ---
@@ -219,6 +221,7 @@ Lista tarefas com status **FEITO**. O gestor pode:
 
 - A cada 60 segundos o sistema verifica prazos expirados e altera tarefas/projetos **PENDENTE** para **ATRASADO**.
 - Quando um desenvolvedor marca uma tarefa como **FEITO**, o gestor recebe um pop‑up de notificação.
+- As notificações visuais (pop‑ups) para tarefas que se tornam FEITO ou ATRASADO são exibidas através de um mecanismo de polling (consulta ao banco a cada 5 segundos).
 - Se uma tarefa vence o prazo, o gestor é alertado.
 - Quando todas as tarefas de um projeto estão **PRONTO**, o projeto automaticamente se torna **FEITO** (e depois o gestor pode validá‑lo para **PRONTO**).
 
