@@ -114,26 +114,42 @@ public class Dashboard extends JFrame {
     private void verificarNotificacoes(UsuarioGestor gestor) {
         try {
             List<Tarefa> tarefasEquipe = sistema.getTarefasDaEquipe(gestor.getId());
+
+            // Conjuntos temporários para saber quais IDs ainda estão nos status relevantes
+            Set<Integer> feitosAtuais = new HashSet<>();
+            Set<Integer> atrasadosAtuais = new HashSet<>();
+
             for (Tarefa t : tarefasEquipe) {
-                if (t.getStatus() == StatusTarefa.FEITO && !tarefasNotificadasFeito.contains(t.getId())) {
-                    tarefasNotificadasFeito.add(t.getId());
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(Dashboard.this,
-                                "A tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") foi marcada como FEITO.",
-                                "Tarefa Pronta para Validação",
-                                JOptionPane.INFORMATION_MESSAGE);
-                    });
+                if (t.getStatus() == StatusTarefa.FEITO) {
+                    feitosAtuais.add(t.getId());
+                    // Se ainda não foi notificado, notifica
+                    if (!tarefasNotificadasFeito.contains(t.getId())) {
+                        tarefasNotificadasFeito.add(t.getId());
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(Dashboard.this,
+                                    "A tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") foi marcada como FEITO.",
+                                    "Tarefa Pronta para Validação",
+                                    JOptionPane.INFORMATION_MESSAGE);
+                        });
+                    }
                 }
-                if (t.getStatus() == StatusTarefa.ATRASADO && !tarefasNotificadasAtrasado.contains(t.getId())) {
-                    tarefasNotificadasAtrasado.add(t.getId());
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(Dashboard.this,
-                                "A tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") expirou e está ATRASADA.",
-                                "Prazo Expirado",
-                                JOptionPane.WARNING_MESSAGE);
-                    });
+                if (t.getStatus() == StatusTarefa.ATRASADO) {
+                    atrasadosAtuais.add(t.getId());
+                    if (!tarefasNotificadasAtrasado.contains(t.getId())) {
+                        tarefasNotificadasAtrasado.add(t.getId());
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(Dashboard.this,
+                                    "A tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") expirou e está ATRASADA.",
+                                    "Prazo Expirado",
+                                    JOptionPane.WARNING_MESSAGE);
+                        });
+                    }
                 }
             }
+
+            tarefasNotificadasFeito.removeIf(id -> !feitosAtuais.contains(id));
+            tarefasNotificadasAtrasado.removeIf(id -> !atrasadosAtuais.contains(id));
+
         } catch (Exception e) {
             e.printStackTrace();
         }
