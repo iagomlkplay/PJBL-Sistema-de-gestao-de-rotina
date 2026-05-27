@@ -162,8 +162,8 @@ public class Sistema {
         try { return projetoDAO.listarPorGestor(gestorId); } catch (Exception e) { e.printStackTrace(); return new ArrayList<>(); }
     }
 
-    // === Notificações ===
-    public void notificarGestorMudancaStatus(Tarefa tarefa, UsuarioDev dev) {
+    // === Notificações (console) ===
+    public void notificarConsoleGestorMudancaStatus(Tarefa tarefa, UsuarioDev dev) {
         UsuarioGestor gestor = buscarGestorPorDev(dev);
         if (gestor != null) {
             System.out.println(">>> NOTIFICAÇÃO para gestor " + gestor.getNome() + " (ID " + gestor.getId() + "): " +
