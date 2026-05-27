@@ -17,7 +17,7 @@ interface Refreshable {
     void refresh();
 }
 
-public class Dashboard extends JFrame {
+public class Dashboard extends JFrame implements NotificacaoListener {
     private Usuario usuarioLogado;
     private Sistema sistema = Sistema.getInstance();
     private JTabbedPane tabbedPane;
@@ -79,8 +79,8 @@ public class Dashboard extends JFrame {
             tabbedPane.addTab("Reatribuir Atrasadas", p5);
             tabbedPane.addTab("Relatório", p6);
 
-            // Registra esta janela no sistema para receber notificações direcionadas
-            sistema.registrarGestorFrame(gestor.getId(), this);
+            // Registra este dashboard como listener de notificações
+            sistema.addNotificacaoListener(this);
         }
 
         add(tabbedPane, BorderLayout.CENTER);
@@ -92,10 +92,21 @@ public class Dashboard extends JFrame {
             public void windowClosing(java.awt.event.WindowEvent e) {
                 sistema.pararVerificadorPrazos();
                 if (usuarioLogado instanceof UsuarioGestor) {
-                    sistema.removerGestorFrame(usuarioLogado.getId());
+                    sistema.removeNotificacaoListener(Dashboard.this);
                 }
             }
         });
+    }
+
+    // Implementação da interface NotificacaoListener
+    @Override
+    public void onNotificacao(String mensagem, int gestorId, String titulo, int tipoMensagem) {
+        // Apenas exibe se o usuário logado é o gestor destinatário
+        if (usuarioLogado instanceof UsuarioGestor && usuarioLogado.getId() == gestorId) {
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(this, mensagem, titulo, tipoMensagem);
+            });
+        }
     }
 
     public void refreshAll() {
@@ -426,7 +437,6 @@ public class Dashboard extends JFrame {
             setLayout(new BorderLayout(10, 10));
             setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-            // Combo de seleção (similar ao tipoItem do EnviarRelatorioPanel)
             tipoCriacao = new JComboBox<>(new String[]{"Projeto", "Tarefa Avulsa", "Tarefa em Projeto"});
             JPanel topPanel = new JPanel(new GridLayout(1, 2, 5, 5));
             topPanel.add(new JLabel("Tipo de criação:"));
@@ -496,10 +506,7 @@ public class Dashboard extends JFrame {
 
                 btnCriar.addActionListener(e -> criarProjeto());
             }
-
-            @Override
-            public void refresh() {}
-
+            @Override public void refresh() {}
             private void criarProjeto() {
                 String nome = txtNome.getText().trim();
                 if (nome.isEmpty()) {
@@ -732,23 +739,13 @@ public class Dashboard extends JFrame {
             // Tarefas FEITO da equipe
             for (Tarefa t : Sistema.getInstance().getTarefasDaEquipe(gestor.getId())) {
                 if (t.getStatus() == StatusTarefa.FEITO) {
-                    model.addRow(new Object[]{
-                            t.getId(),
-                            t.getDescricao(),
-                            "Tarefa",
-                            t.getStatus()
-                    });
+                    model.addRow(new Object[]{t.getId(), t.getDescricao(), "Tarefa", t.getStatus()});
                 }
             }
             // Projetos FEITO da equipe
             for (Projeto p : Sistema.getInstance().getProjetosDaEquipe(gestor.getId())) {
                 if (p.getStatus() == StatusTarefa.FEITO) {
-                    model.addRow(new Object[]{
-                            p.getId(),
-                            p.getNome(),
-                            "Projeto",
-                            p.getStatus()
-                    });
+                    model.addRow(new Object[]{p.getId(), p.getNome(), "Projeto", p.getStatus()});
                 }
             }
         }
@@ -960,12 +957,7 @@ public class Dashboard extends JFrame {
             try {
                 for (Tarefa t : Sistema.getInstance().getTarefasDaEquipe(gestor.getId())) {
                     if (t.getStatus() == StatusTarefa.ATRASADO) {
-                        model.addRow(new Object[]{
-                                t.getId(),
-                                t.getDescricao(),
-                                t.getDevResponsavel().getNome(),
-                                t.getStatus()
-                        });
+                        model.addRow(new Object[]{t.getId(), t.getDescricao(), t.getDevResponsavel().getNome(), t.getStatus()});
                     }
                 }
             } catch (Exception ex) {
@@ -999,23 +991,22 @@ public class Dashboard extends JFrame {
                     null,
                     gestor.getEquipe().toArray(),
                     tarefa.getDevResponsavel());
-            if (novoDev == null) return; // cancelou
+            if (novoDev == null) return;
 
             // 2. Perguntar sobre novo prazo
             String prazoStr = JOptionPane.showInputDialog(this,
                     "Novo prazo (dias a partir de hoje) ou deixe em branco para manter o atual:");
-            if (prazoStr == null) return; // cancelou - aborta toda a operação
+            if (prazoStr == null) return;
 
-            java.util.Date novoPrazo = null;
+            Date novoPrazo = null;
             if (!prazoStr.trim().isEmpty()) {
                 try {
                     int dias = Integer.parseInt(prazoStr.trim());
-                    java.util.Calendar cal = java.util.Calendar.getInstance();
-                    cal.add(java.util.Calendar.DAY_OF_MONTH, dias);
+                    Calendar cal = Calendar.getInstance();
+                    cal.add(Calendar.DAY_OF_MONTH, dias);
                     novoPrazo = cal.getTime();
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(this, "Número inválido. O prazo não será alterado.");
-                    // Não aborta, apenas ignora a alteração de prazo
                 }
             }
 
@@ -1066,9 +1057,7 @@ public class Dashboard extends JFrame {
         }
 
         @Override
-        public void refresh() {
-            // Não recarrega automaticamente
-        }
+        public void refresh() { }
 
         private void gerar() {
             String relatorio = Sistema.getInstance().gerarRelatorioEquipe(gestor.getId());
