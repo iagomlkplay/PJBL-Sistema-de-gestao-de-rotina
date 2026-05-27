@@ -102,7 +102,7 @@ Implementa os papéis de **Desenvolvedor (DEV)** e **Gestor (GESTOR)** com persi
 
 ## Estrutura do Código e Principais Métodos
 
-O projeto é organizado em camadas implícitas: **model** (entidades), **dao** (acesso a dados), **sistema** (lógica de negócio centralizada) e **view** (interface gráfica Swing).
+O projeto é organizado em camadas implícitas: **model** (entidades), **dao** (acesso a dados), **sistema** (lógica de negócio) e **view** (interface gráfica Swing).
 
 ### Entidades (model)
 
