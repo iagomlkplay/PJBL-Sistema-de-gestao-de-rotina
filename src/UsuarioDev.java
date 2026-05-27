@@ -124,7 +124,7 @@ public class UsuarioDev extends Usuario {
         }
 
         System.out.println("Status da tarefa " + tarefa.getId() + " alterado de " + antigo + " para " + novoStatus);
-        Sistema.getInstance().notificarGestorMudancaStatus(tarefa, this);
+        Sistema.getInstance().notificarConsoleGestorMudancaStatus(tarefa, this);
     }
 
     // RF06: enviar relatório final
