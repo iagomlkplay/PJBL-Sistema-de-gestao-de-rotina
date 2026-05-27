@@ -2,13 +2,7 @@ import javax.swing.*;
 import java.util.*;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
-
-// Interface para notificações
-interface NotificacaoListener {
-    void onNotificacao(String mensagem, int gestorId, String titulo, int tipoMensagem);
-}
 
 public class Sistema {
     private static Sistema instance;
@@ -18,7 +12,6 @@ public class Sistema {
     private RelatorioDAO relatorioDAO;
     private SolicitacaoDAO solicitacaoDAO;
     private Timer verificadorTimer;
-    private final List<NotificacaoListener> listeners = new CopyOnWriteArrayList<>();
 
     private Sistema() {
         usuarioDAO = new UsuarioDAO();
@@ -35,21 +28,6 @@ public class Sistema {
             }
         }
         return instance;
-    }
-
-    // === Registro de listeners ===
-    public void addNotificacaoListener(NotificacaoListener listener) {
-        listeners.add(listener);
-    }
-
-    public void removeNotificacaoListener(NotificacaoListener listener) {
-        listeners.remove(listener);
-    }
-
-    private void notificarListeners(String mensagem, int gestorId, String titulo, int tipoMensagem) {
-        for (NotificacaoListener l : listeners) {
-            l.onNotificacao(mensagem, gestorId, titulo, tipoMensagem);
-        }
     }
 
     // === RF01: Cadastro e autenticação ===
@@ -188,10 +166,8 @@ public class Sistema {
     public void notificarGestorMudancaStatus(Tarefa tarefa, UsuarioDev dev) {
         UsuarioGestor gestor = buscarGestorPorDev(dev);
         if (gestor != null) {
-            String mensagem = "O dev " + dev.getNome() + " alterou a tarefa " + tarefa.getId() +
-                    " para " + tarefa.getStatus();
-            System.out.println(">>> NOTIFICAÇÃO para gestor " + gestor.getNome() + " (ID " + gestor.getId() + "): " + mensagem);
-            notificarListeners(mensagem, gestor.getId(), "Tarefa Alterada", JOptionPane.INFORMATION_MESSAGE);
+            System.out.println(">>> NOTIFICAÇÃO para gestor " + gestor.getNome() + " (ID " + gestor.getId() + "): " +
+                    "O dev " + dev.getNome() + " alterou a tarefa " + tarefa.getId() + " para " + tarefa.getStatus());
         } else {
             System.out.println("Gestor não encontrado para o dev " + dev.getNome());
         }
@@ -211,12 +187,12 @@ public class Sistema {
                     // Notifica o gestor
                     UsuarioGestor gestor = buscarGestorPorDev(t.getDevResponsavel());
                     if (gestor != null) {
-                        String msg = "Tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") expirou e foi marcada como ATRASADA.";
-                        System.out.println(">>> ALERTA: " + msg);
-                        notificarListeners(msg, gestor.getId(), "Prazo Expirado", JOptionPane.WARNING_MESSAGE);
+                        System.out.println(">>> ALERTA para gestor " + gestor.getNome() + " (ID " + gestor.getId() + "): " +
+                                "Tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") expirou.");
                     }
                 }
             }
+            // Projetos
             List<Projeto> todosProjetos = getProjetos();
             for (Projeto p : todosProjetos) {
                 if (p.getStatus() == StatusTarefa.PENDENTE && p.getPrazo().before(agora)) {
@@ -257,7 +233,6 @@ public class Sistema {
             sb.append("Tarefas cumpridas (PRONTO): ").append(tarefasCumpridas).append("\n");
             sb.append("Tarefas atrasadas: ").append(tarefasAtrasadas).append("\n");
             sb.append("Relatórios enviados pelos devs: ").append(relatoriosEquipe.size()).append("\n\n");
-
             sb.append("RELATÓRIOS DOS DESENVOLVEDORES\n");
             sb.append("========================================================\n");
             if (relatoriosEquipe.isEmpty()) {
