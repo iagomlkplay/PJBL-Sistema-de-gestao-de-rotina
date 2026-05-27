@@ -166,7 +166,7 @@ public class LoginScreen extends JFrame {
         gbc.gridx = 1;
         form.add(cbTipo, gbc);
 
-        // ========== Painel condicional corrigido ==========
+        // ========== Painel condicional ==========
         JPanel panelGestor = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         panelGestor.add(new JLabel("Departamento:"));
         panelGestor.add(txtDepartamento);
@@ -180,7 +180,7 @@ public class LoginScreen extends JFrame {
         JPanel condPanel = new JPanel(new CardLayout());
         condPanel.add(panelGestor, "GESTOR");
         condPanel.add(panelDev, "DESENVOLVEDOR");
-        condPanel.setVisible(true); // Torna visível desde o início
+        condPanel.setVisible(true);
 
         // Define o card inicial baseado no tipo padrão (DESENVOLVEDOR)
         String tipoInicial = (String) cbTipo.getSelectedItem();
@@ -199,8 +199,6 @@ public class LoginScreen extends JFrame {
             cl2.show(condPanel, tipo);
             dialog.pack();
         });
-
-        // ================================================
 
         JPanel botoes = new JPanel();
         JButton btnSalvar = new JButton("Salvar");
