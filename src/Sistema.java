@@ -1,7 +1,9 @@
 import javax.swing.*;
+import java.awt.Component;
 import java.util.*;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class Sistema {
@@ -12,6 +14,7 @@ public class Sistema {
     private RelatorioDAO relatorioDAO;
     private SolicitacaoDAO solicitacaoDAO;
     private Timer verificadorTimer;
+    private final Map<Integer, JFrame> gestorFrames; // thread-safe
 
     private Sistema() {
         usuarioDAO = new UsuarioDAO();
@@ -19,24 +22,36 @@ public class Sistema {
         tarefaDAO = new TarefaDAO();
         relatorioDAO = new RelatorioDAO();
         solicitacaoDAO = new SolicitacaoDAO();
+        gestorFrames = new ConcurrentHashMap<>();
     }
 
     public static Sistema getInstance() {
-        if (instance == null) instance = new Sistema();
+        if (instance == null) {
+            synchronized (Sistema.class) {
+                if (instance == null) {
+                    instance = new Sistema();
+                }
+            }
+        }
         return instance;
+    }
+
+    // === Registro de janelas ===
+    public void registrarGestorFrame(int gestorId, JFrame frame) {
+        gestorFrames.put(gestorId, frame);
+        System.out.println("[Sistema] Gestor ID " + gestorId + " registrado com frame: " + frame);
+    }
+
+    public void removerGestorFrame(int gestorId) {
+        gestorFrames.remove(gestorId);
+        System.out.println("[Sistema] Gestor ID " + gestorId + " removido.");
     }
 
     // === RF01: Cadastro e autenticação ===
     public boolean realizarCadastro(Usuario usuario) {
         try {
-            // Verifica se e-mail já existe
-            if (usuarioDAO.buscarPorEmail(usuario.getEmail()) != null) {
-                return false;
-            }
-            // Verifica se CPF já existe
-            if (usuarioDAO.buscarPorCpf(usuario.getCpf()) != null) {
-                return false;
-            }
+            if (usuarioDAO.buscarPorEmail(usuario.getEmail()) != null) return false;
+            if (usuarioDAO.buscarPorCpf(usuario.getCpf()) != null) return false;
             usuarioDAO.inserir(usuario);
             return true;
         } catch (Exception e) {
@@ -56,35 +71,19 @@ public class Sistema {
 
     // === Métodos de adição ===
     public void adicionarProjeto(Projeto p) {
-        try {
-            projetoDAO.inserir(p);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        try { projetoDAO.inserir(p); } catch (Exception e) { e.printStackTrace(); }
     }
 
     public void adicionarTarefa(Tarefa t) {
-        try {
-            tarefaDAO.inserir(t);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        try { tarefaDAO.inserir(t); } catch (Exception e) { e.printStackTrace(); }
     }
 
     public void adicionarRelatorio(Relatorio r) {
-        try {
-            relatorioDAO.inserir(r);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        try { relatorioDAO.inserir(r); } catch (Exception e) { e.printStackTrace(); }
     }
 
     public void adicionarSolicitacao(Solicitacao s) {
-        try {
-            solicitacaoDAO.inserir(s);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        try { solicitacaoDAO.inserir(s); } catch (Exception e) { e.printStackTrace(); }
     }
 
     // === Buscas ===
@@ -99,12 +98,7 @@ public class Sistema {
     }
 
     public Projeto buscarProjetoPorId(int id) {
-        try {
-            return projetoDAO.buscarPorId(id);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        try { return projetoDAO.buscarPorId(id); } catch (Exception e) { e.printStackTrace(); return null; }
     }
 
     public UsuarioGestor buscarGestorPorDev(UsuarioDev dev) {
@@ -147,49 +141,24 @@ public class Sistema {
     }
 
     public List<Projeto> getProjetos() {
-        try {
-            return projetoDAO.listarTodos();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        try { return projetoDAO.listarTodos(); } catch (Exception e) { e.printStackTrace(); return new ArrayList<>(); }
     }
 
     public List<Tarefa> getTarefas() {
-        try {
-            return tarefaDAO.listarTodas();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        try { return tarefaDAO.listarTodas(); } catch (Exception e) { e.printStackTrace(); return new ArrayList<>(); }
     }
 
     public List<Relatorio> getRelatorios() {
-        try {
-            return relatorioDAO.listarTodos();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        try { return relatorioDAO.listarTodos(); } catch (Exception e) { e.printStackTrace(); return new ArrayList<>(); }
     }
 
     public List<Solicitacao> getSolicitacoes() {
-        try {
-            return solicitacaoDAO.listarTodos();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        try { return solicitacaoDAO.listarTodos(); } catch (Exception e) { e.printStackTrace(); return new ArrayList<>(); }
     }
 
     // === Solicitações por gestor ===
     public List<Solicitacao> getSolicitacoesPorGestor(int gestorId) {
-        try {
-            return solicitacaoDAO.listarPorGestor(gestorId);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        try { return solicitacaoDAO.listarPorGestor(gestorId); } catch (Exception e) { e.printStackTrace(); return new ArrayList<>(); }
     }
 
     // === Tarefas e projetos por equipe ===
@@ -207,13 +176,7 @@ public class Sistema {
     }
 
     public List<Projeto> getProjetosDaEquipe(int gestorId) {
-        try {
-            // Retorna projetos que pertencem ao gestor (gestor_id = gestorId)
-            return projetoDAO.listarPorGestor(gestorId);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        try { return projetoDAO.listarPorGestor(gestorId); } catch (Exception e) { e.printStackTrace(); return new ArrayList<>(); }
     }
 
     // === Notificações ===
@@ -222,8 +185,16 @@ public class Sistema {
         if (gestor != null) {
             String mensagem = "O dev " + dev.getNome() + " alterou a tarefa " + tarefa.getId() +
                     " para " + tarefa.getStatus();
-            System.out.println(">>> NOTIFICAÇÃO para gestor " + gestor.getNome() + ": " + mensagem);
-            mostrarPopUp(mensagem, "Tarefa Alterada", JOptionPane.INFORMATION_MESSAGE);
+            System.out.println(">>> NOTIFICAÇÃO para gestor " + gestor.getNome() + " (ID " + gestor.getId() + "): " + mensagem);
+            System.out.println("Mapa atual de frames (IDs): " + gestorFrames.keySet());
+            JFrame frame = gestorFrames.get(gestor.getId());
+            if (frame == null) {
+                System.err.println("ERRO: Frame do gestor " + gestor.getNome() + " NÃO ENCONTRADO. Pop‑up não será exibido.");
+                return;
+            }
+            mostrarPopUp(frame, mensagem, "Tarefa Alterada", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            System.out.println("Gestor não encontrado para o dev " + dev.getNome());
         }
     }
 
@@ -243,11 +214,17 @@ public class Sistema {
                     if (gestor != null) {
                         String msg = "Tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") expirou e foi marcada como ATRASADA.";
                         System.out.println(">>> ALERTA: " + msg);
-                        mostrarPopUp(msg, "Prazo Expirado", JOptionPane.WARNING_MESSAGE);
+                        System.out.println("Mapa atual de frames (IDs): " + gestorFrames.keySet());
+                        JFrame frame = gestorFrames.get(gestor.getId());
+                        System.out.println("Frame obtido para ID " + gestor.getId() + ": " + frame);
+                        if (frame != null) {
+                            mostrarPopUp(frame, msg, "Prazo Expirado", JOptionPane.WARNING_MESSAGE);
+                        } else {
+                            System.err.println("ERRO: Frame do gestor " + gestor.getNome() + " não encontrado.");
+                        }
                     }
                 }
             }
-            // Projetos
             List<Projeto> todosProjetos = getProjetos();
             for (Projeto p : todosProjetos) {
                 if (p.getStatus() == StatusTarefa.PENDENTE && p.getPrazo().before(agora)) {
@@ -272,10 +249,8 @@ public class Sistema {
                     .filter(t -> devIds.contains(t.getDevResponsavel().getId()))
                     .collect(Collectors.toList());
 
-            long tarefasCumpridas = tarefasEquipe.stream()
-                    .filter(t -> t.getStatus() == StatusTarefa.PRONTO).count();
-            long tarefasAtrasadas = tarefasEquipe.stream()
-                    .filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
+            long tarefasCumpridas = tarefasEquipe.stream().filter(t -> t.getStatus() == StatusTarefa.PRONTO).count();
+            long tarefasAtrasadas = tarefasEquipe.stream().filter(t -> t.getStatus() == StatusTarefa.ATRASADO).count();
 
             // Relatórios enviados pelos devs da equipe
             List<Relatorio> relatoriosEquipe = getRelatorios().stream()
@@ -319,9 +294,7 @@ public class Sistema {
 
     // === Timer ===
     public void iniciarVerificadorPrazos(long intervaloMilissegundos) {
-        if (verificadorTimer != null) {
-            verificadorTimer.cancel();
-        }
+        if (verificadorTimer != null) verificadorTimer.cancel();
         verificadorTimer = new Timer(true);
         verificadorTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -338,10 +311,13 @@ public class Sistema {
         }
     }
 
-    // === Método auxiliar para exibir pop‑up na thread correta ===
-    private void mostrarPopUp(String mensagem, String titulo, int tipoMensagem) {
+    private void mostrarPopUp(Component parent, String mensagem, String titulo, int tipoMensagem) {
         SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(null, mensagem, titulo, tipoMensagem);
+            if (parent != null) {
+                JOptionPane.showMessageDialog(parent, mensagem, titulo, tipoMensagem);
+            } else {
+                System.err.println("Pop-up não exibido: parent é null");
+            }
         });
     }
 }
