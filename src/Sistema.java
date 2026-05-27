@@ -1,10 +1,14 @@
 import javax.swing.*;
-import java.awt.Component;
 import java.util.*;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
+
+// Interface para notificações
+interface NotificacaoListener {
+    void onNotificacao(String mensagem, int gestorId, String titulo, int tipoMensagem);
+}
 
 public class Sistema {
     private static Sistema instance;
@@ -14,7 +18,7 @@ public class Sistema {
     private RelatorioDAO relatorioDAO;
     private SolicitacaoDAO solicitacaoDAO;
     private Timer verificadorTimer;
-    private final Map<Integer, JFrame> gestorFrames; // thread-safe
+    private final List<NotificacaoListener> listeners = new CopyOnWriteArrayList<>();
 
     private Sistema() {
         usuarioDAO = new UsuarioDAO();
@@ -22,29 +26,30 @@ public class Sistema {
         tarefaDAO = new TarefaDAO();
         relatorioDAO = new RelatorioDAO();
         solicitacaoDAO = new SolicitacaoDAO();
-        gestorFrames = new ConcurrentHashMap<>();
     }
 
     public static Sistema getInstance() {
         if (instance == null) {
             synchronized (Sistema.class) {
-                if (instance == null) {
-                    instance = new Sistema();
-                }
+                if (instance == null) instance = new Sistema();
             }
         }
         return instance;
     }
 
-    // === Registro de janelas ===
-    public void registrarGestorFrame(int gestorId, JFrame frame) {
-        gestorFrames.put(gestorId, frame);
-        System.out.println("[Sistema] Gestor ID " + gestorId + " registrado com frame: " + frame);
+    // === Registro de listeners ===
+    public void addNotificacaoListener(NotificacaoListener listener) {
+        listeners.add(listener);
     }
 
-    public void removerGestorFrame(int gestorId) {
-        gestorFrames.remove(gestorId);
-        System.out.println("[Sistema] Gestor ID " + gestorId + " removido.");
+    public void removeNotificacaoListener(NotificacaoListener listener) {
+        listeners.remove(listener);
+    }
+
+    private void notificarListeners(String mensagem, int gestorId, String titulo, int tipoMensagem) {
+        for (NotificacaoListener l : listeners) {
+            l.onNotificacao(mensagem, gestorId, titulo, tipoMensagem);
+        }
     }
 
     // === RF01: Cadastro e autenticação ===
@@ -186,13 +191,7 @@ public class Sistema {
             String mensagem = "O dev " + dev.getNome() + " alterou a tarefa " + tarefa.getId() +
                     " para " + tarefa.getStatus();
             System.out.println(">>> NOTIFICAÇÃO para gestor " + gestor.getNome() + " (ID " + gestor.getId() + "): " + mensagem);
-            System.out.println("Mapa atual de frames (IDs): " + gestorFrames.keySet());
-            JFrame frame = gestorFrames.get(gestor.getId());
-            if (frame == null) {
-                System.err.println("ERRO: Frame do gestor " + gestor.getNome() + " NÃO ENCONTRADO. Pop‑up não será exibido.");
-                return;
-            }
-            mostrarPopUp(frame, mensagem, "Tarefa Alterada", JOptionPane.INFORMATION_MESSAGE);
+            notificarListeners(mensagem, gestor.getId(), "Tarefa Alterada", JOptionPane.INFORMATION_MESSAGE);
         } else {
             System.out.println("Gestor não encontrado para o dev " + dev.getNome());
         }
@@ -214,14 +213,7 @@ public class Sistema {
                     if (gestor != null) {
                         String msg = "Tarefa '" + t.getDescricao() + "' (ID " + t.getId() + ") expirou e foi marcada como ATRASADA.";
                         System.out.println(">>> ALERTA: " + msg);
-                        System.out.println("Mapa atual de frames (IDs): " + gestorFrames.keySet());
-                        JFrame frame = gestorFrames.get(gestor.getId());
-                        System.out.println("Frame obtido para ID " + gestor.getId() + ": " + frame);
-                        if (frame != null) {
-                            mostrarPopUp(frame, msg, "Prazo Expirado", JOptionPane.WARNING_MESSAGE);
-                        } else {
-                            System.err.println("ERRO: Frame do gestor " + gestor.getNome() + " não encontrado.");
-                        }
+                        notificarListeners(msg, gestor.getId(), "Prazo Expirado", JOptionPane.WARNING_MESSAGE);
                     }
                 }
             }
@@ -309,15 +301,5 @@ public class Sistema {
             verificadorTimer.cancel();
             verificadorTimer = null;
         }
-    }
-
-    private void mostrarPopUp(Component parent, String mensagem, String titulo, int tipoMensagem) {
-        SwingUtilities.invokeLater(() -> {
-            if (parent != null) {
-                JOptionPane.showMessageDialog(parent, mensagem, titulo, tipoMensagem);
-            } else {
-                System.err.println("Pop-up não exibido: parent é null");
-            }
-        });
     }
 }
