@@ -89,7 +89,7 @@ public class Dashboard extends JFrame {
 
         add(tabbedPane, BorderLayout.CENTER);
 
-        sistema.iniciarVerificadorPrazos(500);
+        sistema.iniciarVerificadorPrazos(60000);
 
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
@@ -108,7 +108,7 @@ public class Dashboard extends JFrame {
             public void run() {
                 verificarNotificacoes(gestor);
             }
-        }, 5000, 500); // primeira execução após 5 segundos, depois a cada 0.5 segundos
+        }, 5000, 5000); // primeira execução após 5 segundos, depois a cada 5 segundos
     }
 
     private void verificarNotificacoes(UsuarioGestor gestor) {
@@ -173,7 +173,7 @@ public class Dashboard extends JFrame {
         public MinhasTarefasPanel(UsuarioDev dev) {
             this.dev = dev;
             setLayout(new BorderLayout());
-            model = new DefaultTableModel(new String[]{"ID", "Descrição", "Nome Projeto/Tarefa Avulsa", "Prazo", "Status", "Progresso", "Horas (Trab/Esim)"}, 0);
+            model = new DefaultTableModel(new String[]{"ID", "Descrição", "Nome Projeto/Tarefa Avulsa", "Prazo", "Status", "Progresso (%)", "Horas (Trab/Esim)"}, 0);
             table = new JTable(model);
             table.setDefaultRenderer(Integer.class, new ProgressBarRenderer());
             add(new JScrollPane(table), BorderLayout.CENTER);
