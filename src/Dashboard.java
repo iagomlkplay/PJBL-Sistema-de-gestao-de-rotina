@@ -37,7 +37,7 @@ public class Dashboard extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 800);
         setLocationRelativeTo(null);
-        setExtendedState(JFrame.MAXIMIZED_BOTH); // tela cheia
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         tabbedPane = new JTabbedPane();
 
@@ -78,6 +78,9 @@ public class Dashboard extends JFrame {
             tabbedPane.addTab("Solicitações Pendentes", p4);
             tabbedPane.addTab("Reatribuir Atrasadas", p5);
             tabbedPane.addTab("Relatório", p6);
+
+            // Registra esta janela no sistema para receber notificações direcionadas
+            sistema.registrarGestorFrame(gestor.getId(), this);
         }
 
         add(tabbedPane, BorderLayout.CENTER);
@@ -88,6 +91,9 @@ public class Dashboard extends JFrame {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
                 sistema.pararVerificadorPrazos();
+                if (usuarioLogado instanceof UsuarioGestor) {
+                    sistema.removerGestorFrame(usuarioLogado.getId());
+                }
             }
         });
     }
@@ -694,11 +700,14 @@ public class Dashboard extends JFrame {
         private UsuarioGestor gestor;
         private JTable table;
         private DefaultTableModel model;
+        private TarefaDAO tarefaDAO = new TarefaDAO();
+        private ProjetoDAO projetoDAO = new ProjetoDAO();
+        private UsuarioDAO usuarioDAO = new UsuarioDAO();
 
         public ValidarFinalizacoesPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
-            model = new DefaultTableModel(new String[]{"ID", "Descrição", "Responsável", "Status"}, 0);
+            model = new DefaultTableModel(new String[]{"ID", "Nome/Descrição", "Tipo", "Status"}, 0);
             table = new JTable(model);
             add(new JScrollPane(table), BorderLayout.CENTER);
 
@@ -720,39 +729,59 @@ public class Dashboard extends JFrame {
         @Override
         public void refresh() {
             model.setRowCount(0);
-            try {
-                for (Tarefa t : Sistema.getInstance().getTarefasDaEquipe(gestor.getId())) {
-                    if (t.getStatus() == StatusTarefa.FEITO) {
-                        model.addRow(new Object[]{
-                                t.getId(),
-                                t.getDescricao(),
-                                t.getDevResponsavel().getNome(),
-                                t.getStatus()
-                        });
-                    }
+            // Tarefas FEITO da equipe
+            for (Tarefa t : Sistema.getInstance().getTarefasDaEquipe(gestor.getId())) {
+                if (t.getStatus() == StatusTarefa.FEITO) {
+                    model.addRow(new Object[]{
+                            t.getId(),
+                            t.getDescricao(),
+                            "Tarefa",
+                            t.getStatus()
+                    });
                 }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro ao carregar: " + ex.getMessage());
+            }
+            // Projetos FEITO da equipe
+            for (Projeto p : Sistema.getInstance().getProjetosDaEquipe(gestor.getId())) {
+                if (p.getStatus() == StatusTarefa.FEITO) {
+                    model.addRow(new Object[]{
+                            p.getId(),
+                            p.getNome(),
+                            "Projeto",
+                            p.getStatus()
+                    });
+                }
             }
         }
 
         private void validar() {
             int linha = table.getSelectedRow();
             if (linha == -1) {
-                JOptionPane.showMessageDialog(this, "Selecione uma tarefa.");
+                JOptionPane.showMessageDialog(this, "Selecione um item.");
                 return;
             }
             int id = (int) model.getValueAt(linha, 0);
-            Tarefa tarefa = null;
+            String tipo = (String) model.getValueAt(linha, 2);
             try {
-                tarefa = Sistema.getInstance().getTarefas().stream()
-                        .filter(t -> t.getId() == id).findFirst().orElse(null);
-                if (tarefa != null && tarefa.getStatus() == StatusTarefa.FEITO) {
-                    gestor.validarFinalizacao(tarefa);
-                    ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
-                    JOptionPane.showMessageDialog(this, "Tarefa validada como PRONTO.");
+                if ("Projeto".equals(tipo)) {
+                    Projeto projeto = Sistema.getInstance().getProjetos().stream()
+                            .filter(p -> p.getId() == id).findFirst().orElse(null);
+                    if (projeto != null && projeto.getStatus() == StatusTarefa.FEITO) {
+                        gestor.validarFinalizacao(projeto);
+                        ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
+                        JOptionPane.showMessageDialog(this, "Projeto validado como PRONTO.");
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Este projeto não está com status FEITO.");
+                    }
                 } else {
-                    JOptionPane.showMessageDialog(this, "Esta tarefa não está com status FEITO.");
+                    Tarefa tarefa = Sistema.getInstance().getTarefas().stream()
+                            .filter(t -> t.getId() == id).findFirst().orElse(null);
+                    if (tarefa != null && tarefa.getStatus() == StatusTarefa.FEITO) {
+                        gestor.validarFinalizacao(tarefa);
+                        ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
+                        JOptionPane.showMessageDialog(this, "Tarefa validada como PRONTO.");
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Esta tarefa não está com status FEITO.");
+                    }
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao validar: " + ex.getMessage());
@@ -762,22 +791,48 @@ public class Dashboard extends JFrame {
         private void rejeitar() {
             int linha = table.getSelectedRow();
             if (linha == -1) {
-                JOptionPane.showMessageDialog(this, "Selecione uma tarefa.");
+                JOptionPane.showMessageDialog(this, "Selecione um item.");
                 return;
             }
             int id = (int) model.getValueAt(linha, 0);
-            Tarefa tarefa = null;
+            String tipo = (String) model.getValueAt(linha, 2);
             try {
-                tarefa = Sistema.getInstance().getTarefas().stream()
-                        .filter(t -> t.getId() == id).findFirst().orElse(null);
-                if (tarefa != null && tarefa.getStatus() == StatusTarefa.FEITO) {
-                    tarefa.setStatus(StatusTarefa.PENDENTE);
-                    TarefaDAO dao = new TarefaDAO();
-                    dao.atualizarStatus(tarefa.getId(), StatusTarefa.PENDENTE);
-                    JOptionPane.showMessageDialog(this, "Tarefa rejeitada e retornada para PENDENTE.");
-                    ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
+                if ("Projeto".equals(tipo)) {
+                    Projeto projeto = Sistema.getInstance().getProjetos().stream()
+                            .filter(p -> p.getId() == id).findFirst().orElse(null);
+                    if (projeto != null && projeto.getStatus() == StatusTarefa.FEITO) {
+                        // Projeto volta para PENDENTE
+                        projeto.setStatus(StatusTarefa.PENDENTE);
+                        projetoDAO.atualizarStatus(projeto.getId(), StatusTarefa.PENDENTE);
+
+                        // Tarefas do projeto: as que estavam PRONTO voltam para FEITO
+                        List<Tarefa> tarefasDoProjeto = tarefaDAO.listarPorProjeto(projeto.getId(), usuarioDAO, projetoDAO);
+                        int count = 0;
+                        for (Tarefa t : tarefasDoProjeto) {
+                            if (t.getStatus() == StatusTarefa.PRONTO) {
+                                t.setStatus(StatusTarefa.FEITO);
+                                tarefaDAO.atualizarStatus(t.getId(), StatusTarefa.FEITO);
+                                count++;
+                            }
+                        }
+                        JOptionPane.showMessageDialog(this,
+                                "Projeto rejeitado. " + count + " tarefa(s) retornaram para FEITO.\n" +
+                                        "Use a aba 'Validar Finalizações' para revalidar individualmente.");
+                        ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Este projeto não está com status FEITO.");
+                    }
                 } else {
-                    JOptionPane.showMessageDialog(this, "Esta tarefa não está com status FEITO.");
+                    Tarefa tarefa = Sistema.getInstance().getTarefas().stream()
+                            .filter(t -> t.getId() == id).findFirst().orElse(null);
+                    if (tarefa != null && tarefa.getStatus() == StatusTarefa.FEITO) {
+                        tarefa.setStatus(StatusTarefa.PENDENTE);
+                        tarefaDAO.atualizarStatus(tarefa.getId(), StatusTarefa.PENDENTE);
+                        JOptionPane.showMessageDialog(this, "Tarefa rejeitada e retornada para PENDENTE.");
+                        ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Esta tarefa não está com status FEITO.");
+                    }
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao rejeitar: " + ex.getMessage());
@@ -877,49 +932,54 @@ public class Dashboard extends JFrame {
         private UsuarioGestor gestor;
         private JTable table;
         private DefaultTableModel model;
-        private JComboBox<UsuarioDev> cbNovoDev;
+        private TarefaDAO tarefaDAO = new TarefaDAO();
+
         public ReatribuirAtrasadasPanel(UsuarioGestor gestor) {
             this.gestor = gestor;
             setLayout(new BorderLayout());
+
             model = new DefaultTableModel(new String[]{"ID", "Descrição", "Responsável Atual", "Status"}, 0);
             table = new JTable(model);
             add(new JScrollPane(table), BorderLayout.CENTER);
+
             JPanel bottom = new JPanel();
-            bottom.add(new JLabel("Reatribuir para:"));
-            cbNovoDev = new JComboBox<>();
-            bottom.add(cbNovoDev);
             JButton btnReatribuir = new JButton("Reatribuir");
-            bottom.add(btnReatribuir);
             JButton btnRefresh = new JButton("Atualizar");
+            bottom.add(btnReatribuir);
             bottom.add(btnRefresh);
             add(bottom, BorderLayout.SOUTH);
+
             refresh();
             btnReatribuir.addActionListener(e -> reatribuir());
             btnRefresh.addActionListener(e -> refresh());
         }
+
         @Override
         public void refresh() {
             model.setRowCount(0);
             try {
                 for (Tarefa t : Sistema.getInstance().getTarefasDaEquipe(gestor.getId())) {
                     if (t.getStatus() == StatusTarefa.ATRASADO) {
-                        model.addRow(new Object[]{t.getId(), t.getDescricao(), t.getDevResponsavel().getNome(), t.getStatus()});
+                        model.addRow(new Object[]{
+                                t.getId(),
+                                t.getDescricao(),
+                                t.getDevResponsavel().getNome(),
+                                t.getStatus()
+                        });
                     }
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao carregar: " + ex.getMessage());
             }
-            cbNovoDev.removeAllItems();
-            for (UsuarioDev d : gestor.getEquipe()) {
-                cbNovoDev.addItem(d);
-            }
         }
+
         private void reatribuir() {
             int linha = table.getSelectedRow();
             if (linha == -1) {
                 JOptionPane.showMessageDialog(this, "Selecione uma tarefa atrasada.");
                 return;
             }
+
             int id = (int) model.getValueAt(linha, 0);
             Tarefa tarefa = null;
             try {
@@ -931,7 +991,7 @@ public class Dashboard extends JFrame {
                 return;
             }
 
-            // Selecionar novo desenvolvedor
+            // 1. Escolher novo desenvolvedor
             UsuarioDev novoDev = (UsuarioDev) JOptionPane.showInputDialog(this,
                     "Selecione o novo desenvolvedor responsável:",
                     "Reatribuir Tarefa",
@@ -939,13 +999,15 @@ public class Dashboard extends JFrame {
                     null,
                     gestor.getEquipe().toArray(),
                     tarefa.getDevResponsavel());
-            if (novoDev == null) return;
+            if (novoDev == null) return; // cancelou
 
-            // Novo prazo (opcional)
+            // 2. Perguntar sobre novo prazo
             String prazoStr = JOptionPane.showInputDialog(this,
                     "Novo prazo (dias a partir de hoje) ou deixe em branco para manter o atual:");
+            if (prazoStr == null) return; // cancelou - aborta toda a operação
+
             java.util.Date novoPrazo = null;
-            if (prazoStr != null && !prazoStr.trim().isEmpty()) {
+            if (!prazoStr.trim().isEmpty()) {
                 try {
                     int dias = Integer.parseInt(prazoStr.trim());
                     java.util.Calendar cal = java.util.Calendar.getInstance();
@@ -953,12 +1015,15 @@ public class Dashboard extends JFrame {
                     novoPrazo = cal.getTime();
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(this, "Número inválido. O prazo não será alterado.");
+                    // Não aborta, apenas ignora a alteração de prazo
                 }
             }
 
+            // 3. Executar a reatribuição
             try {
-                TarefaDAO tarefaDAO = new TarefaDAO();
                 tarefaDAO.reatribuirDev(tarefa.getId(), novoDev.getId());
+                tarefa.setDevResponsavel(novoDev);
+
                 if (novoPrazo != null) {
                     tarefa.setPrazo(novoPrazo);
                     String sql = "UPDATE tarefas SET prazo = ? WHERE id = ?";
@@ -969,11 +1034,13 @@ public class Dashboard extends JFrame {
                         stmt.executeUpdate();
                     }
                 }
-                // Mudar status para PENDENTE
+
                 tarefa.setStatus(StatusTarefa.PENDENTE);
                 tarefaDAO.atualizarStatus(tarefa.getId(), StatusTarefa.PENDENTE);
-                tarefa.setDevResponsavel(novoDev);
-                JOptionPane.showMessageDialog(this, "Tarefa reatribuída, prazo atualizado e status alterado para PENDENTE.");
+
+                JOptionPane.showMessageDialog(this, "Tarefa reatribuída a " + novoDev.getNome() +
+                        (novoPrazo != null ? " com novo prazo." : ".") +
+                        " Status alterado para PENDENTE.");
                 ((Dashboard) SwingUtilities.getWindowAncestor(this)).refreshAll();
             } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
